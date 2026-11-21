@@ -155,12 +155,13 @@ export function Experience() {
           <p className="eyebrow mono hero-eyebrow">
             <span className="idx">[01]</span> After incorporation
           </p>
-          <h1>
-            <SplitWords text="Atlas forms your company in a day." />
-            <br />
-            <em>
-              <SplitWords text="Staying in good standing is on you." delay={420} />
-            </em>
+          <h1 className="hero-title">
+            <span className="hero-line">
+              <SplitWords text="Atlas forms your company in a day." />
+            </span>
+            <span className="hero-line hero-line-soft">
+              <SplitWords text="Staying in good standing is on you." delay={380} />
+            </span>
           </h1>
           <p className="lede">
             Good Standing reads your formation documents, builds your company record, and tells you what you owe, when it's due and why. Every number traces to a page, an answer or an

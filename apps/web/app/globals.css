@@ -376,11 +376,37 @@ main {
 
 .hero h1 {
   grid-area: title;
-  max-width: 17ch;
+}
+
+/* One typeface, two tones: the fact in white, the consequence in a softer grey. */
+.hero-title {
+  max-width: none;
+  font-size: clamp(40px, 5.8vw, 88px);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  text-shadow: 0 2px 40px rgba(5, 3, 13, 0.55);
+}
+
+.hero-line {
+  display: block;
+  max-width: 19ch;
+  text-wrap: balance;
+  color: #f5f4fa;
+}
+
+.hero-line-soft {
+  color: #a3a3ba;
 }
 
 .hero .lede {
   grid-area: lede;
+  max-width: 48ch;
+  margin-top: 32px;
+  font-size: clamp(17px, 1.4vw, 20px);
+  line-height: 1.6;
+  color: #d6d5e2;
+  text-shadow: 0 1px 24px rgba(5, 3, 13, 0.7);
 }
 
 .hero .cta {
