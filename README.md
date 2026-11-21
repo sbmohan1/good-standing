@@ -9,6 +9,8 @@ Good Standing is an AI agent that reads your formation documents, builds a struc
 record of your company, and tells you what you owe, when it's due, and why it applies, with
 every number traced back to its source. It prepares filings, and you file them yourself.
 
+**Live demo:** https://good-standing-delta.vercel.app ([open the demo company](https://good-standing-delta.vercel.app/?demo=1))
+
 _Status: work in progress. See [BRIEF.md](./BRIEF.md) for the full spec._
 
 ## What it does
@@ -33,7 +35,7 @@ _Status: work in progress. See [BRIEF.md](./BRIEF.md) for the full spec._
 | `packages/core` | Schema, rules registry, franchise tax engine, calendar builder. Pure functions, fully tested. |
 | `packages/extract` | PDF → `CompanyRecord` extraction with Claude, with every quote verified against the PDF's own text. |
 | `packages/mcp` | MCP server for Claude Code, Claude Desktop and Cursor (stdio). |
-| `apps/web` | One-page demo (Next.js). _(Phase 5)_ |
+| `apps/web` | One-page demo (Next.js on Vercel). Core runs in the browser; only PDF extraction hits the server. |
 
 ## Develop
 
@@ -50,6 +52,18 @@ Requires Node 22.18+ (TypeScript runs natively, with no build step) and pnpm. Co
 pnpm --filter @good-standing/extract samples   # regenerate the synthetic Lumen Labs PDFs
 pnpm --filter @good-standing/extract eval      # live extraction eval (calls the Anthropic API; a few cents)
 ```
+
+## Web demo
+
+```bash
+pnpm --filter @good-standing/web dev     # http://localhost:3000, reads ANTHROPIC_API_KEY from the environment
+```
+
+- `/?demo=1` opens the fictional Lumen Labs company with its document facts awaiting confirmation. `/?demo=confirmed` skips the review.
+- The demo company, review, estimate, calendar and packet all run in the browser with `@good-standing/core`. Nothing about them is sent anywhere.
+- `POST /api/extract` takes up to 4 PDFs (4 MB in total), reads them in memory, sends them to the Anthropic API and returns the record. Nothing is written to disk, and file contents are never logged.
+- Deploy: a Vercel project with root directory `apps/web` and `ANTHROPIC_API_KEY` set. Optional: `ANTHROPIC_MODEL`, and `NEXT_PUBLIC_REPO_URL` for the GitHub link.
+- The liquid-chrome background is an original WebGL shader (`apps/web/components/LiquidChrome.tsx`). It renders at reduced resolution, pauses in hidden tabs and holds a still frame for `prefers-reduced-motion`.
 
 ## How extraction stays honest
 
@@ -152,4 +166,7 @@ Collected from `TODO(verify)` markers in `packages/core/src`. Each one is also s
 - **Atlas Dashboard link.** `https://dashboard.stripe.com/atlas` couldn't be confirmed because it sits behind a Stripe login.
 - **Weekend due dates.** Dates are shown as stated (e.g. 1099-NEC on Jan 31, 2027, a Sunday) with a note that the IRS accepts the next business day. Delaware dates aren't adjusted.
 - **As-of dates** record when each value was encoded from the sources listed in BRIEF §6. They aren't independent legal review.
+- **Web upload limit is 4 MB, not 10 MB.** Vercel Functions cap request bodies at 4.5 MB. The MCP server still accepts 10 MB files. Larger uploads would need direct-to-storage uploads, which would break the "never stored" promise.
+- **Web rate limit is best effort.** 6 extractions per IP per 10 minutes, counted in each function instance's memory. It isn't a global quota.
+- **Web demo record lives in the page.** Refreshing the page loses edits. Nothing is saved server-side by design.
 - **Out of scope:** prorated franchise tax after mid-year share amendments, Large Corporate Filer math, and state taxes outside Delaware. These are detected and flagged, not calculated.

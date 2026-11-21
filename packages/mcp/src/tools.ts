@@ -21,7 +21,7 @@ import {
 import { buildRecord, type DocumentExtraction, extractDocument, type ExtractionModel } from "@good-standing/extract";
 import { z } from "zod";
 import { explainGrounding } from "./explain.ts";
-import { displayValue, FIELDS } from "./fields.ts";
+import { displayValue, FIELDS } from "@good-standing/core";
 import { openQuestions, renderCalendar, renderEstimate, renderRecord } from "./render.ts";
 import type { RecordStore } from "./store.ts";
 import { checkAgentKey, fetchStripeHints, renderStripeHints, type StripeReader } from "./stripeHints.ts";

@@ -1,0 +1,8 @@
+# Never upload secrets or local company records.
+.env
+.env.*
+!.env.example
+.good-standing/
+**/node_modules
+**/.next
+.claude/

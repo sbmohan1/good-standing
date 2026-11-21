@@ -12,3 +12,4 @@ coverage/
 
 # Local company record written by the MCP server (user-controlled, private)
 .good-standing/
+.vercel

@@ -11,7 +11,7 @@ import {
   type ObligationsSummary,
   usd,
 } from "@good-standing/core";
-import { displayValue, FIELDS } from "./fields.ts";
+import { displayValue, FIELDS } from "@good-standing/core";
 
 export function withFooter(text: string): string {
   return `${text.trimEnd()}\n\n---\n_${DISCLAIMER}_`;

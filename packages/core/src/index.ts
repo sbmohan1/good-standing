@@ -11,3 +11,4 @@ export { defaultTaxYear, summarizeObligations, type ObligationsSummary } from ".
 export { buildFilingPacket, type FilingPacket } from "./packet.ts";
 export { firstThirtyDaysCheck, type ChecklistItem, type FirstThirtyDays } from "./firstThirtyDays.ts";
 export { LINKS } from "./links.ts";
+export { FIELDS, displayValue } from "./fields.ts";

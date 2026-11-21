@@ -1,4 +1,5 @@
-import { type CompanyRecord, type CompanyRecordField, count, usd } from "@good-standing/core";
+import { count, usd } from "./format.ts";
+import type { CompanyRecord, CompanyRecordField } from "./schema.ts";
 
 /** Human labels and the question to ask when a field is missing. */
 export const FIELDS: Record<CompanyRecordField, { label: string; question?: string; fromDocuments?: boolean }> = {
