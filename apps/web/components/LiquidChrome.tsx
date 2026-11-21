@@ -95,8 +95,8 @@ float ripples(vec2 p) {
     float age = uTime - uRipples[i].z;
     if (uRipples[i].z < 0.0 || age < 0.0 || age > 4.0) continue;
     vec2 c = (uRipples[i].xy - 0.5) * aspect * uScale * 0.6;
-    float w = length(p - c) - age * 0.55;
-    h += 0.2 * exp(-w * w * 5.0) * sin(w * 16.0) * exp(-age * 0.75);
+    float w = length(p - c) - age * 0.3;
+    h += 0.05 * exp(-w * w * 3.0) * sin(w * 8.0) * exp(-age * 0.9);
   }
   return h;
 }
@@ -107,8 +107,8 @@ float heightAt(vec2 p, float t, vec2 m) {
   vec2 dm = p - m;
   float near = exp(-dot(dm, dm) * 1.2);
   vec2 p0 = p;
-  p -= uDrag * aspect * uScale * 0.6 * near * 2.2;
-  float a = near * (0.6 + 1.4 * uPress);
+  p -= uDrag * aspect * uScale * 0.6 * near * 1.0;
+  float a = near * (0.4 + 0.8 * uPress);
   p = m + mat2(cos(a), -sin(a), sin(a), cos(a)) * dm;
   p += dm * near * 0.6 * uPress;
   vec2 q = vec2(fbm(p + vec2(0.0, t)), fbm(p + vec2(5.2, 1.3) - 0.7 * t));
@@ -259,9 +259,9 @@ export function LiquidChrome({ params = DEFAULT_CHROME }: { params?: ChromeParam
       energy = Math.min(1, energy + Math.hypot(nx - target.x, ny - target.y) * 6);
       target.x = nx;
       target.y = ny;
-      // Drop a new ring once the cursor has travelled far enough, at most every 120 ms.
+      // Drop a new ring once the cursor has travelled far enough, at most every 250 ms.
       const now = (performance.now() - start) / 1000;
-      if (Math.hypot(nx - last.x, ny - last.y) > 0.06 && now - last.at > 0.12) emit(nx, ny);
+      if (Math.hypot(nx - last.x, ny - last.y) > 0.1 && now - last.at > 0.25) emit(nx, ny);
     };
     const onDown = (event: PointerEvent) => emit(event.clientX / window.innerWidth, 1 - event.clientY / window.innerHeight);
     window.addEventListener("pointermove", onMove, { passive: true });
@@ -270,10 +270,10 @@ export function LiquidChrome({ params = DEFAULT_CHROME }: { params?: ChromeParam
     let frame = 0;
     let running = true;
     const draw = (now: number) => {
-      mouse.x += (target.x - mouse.x) * 0.06;
-      mouse.y += (target.y - mouse.y) * 0.06;
-      energy *= 0.96;
-      press += (Math.max(0.35, energy) - press) * 0.08;
+      mouse.x += (target.x - mouse.x) * 0.025;
+      mouse.y += (target.y - mouse.y) * 0.025;
+      energy *= 0.985;
+      press += (Math.max(0.35, energy) - press) * 0.025;
       gl.uniform1f(uTime, reduceMotion ? 12 : (now - start) / 1000);
       gl.uniform2f(uMouse, mouse.x, mouse.y);
       gl.uniform1f(uPress, press);
