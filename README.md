@@ -56,4 +56,14 @@ _TODO (Phase 6): table of every rule with its source URL and as-of date._
 
 ## Known gaps
 
-_TODO: collected from `TODO(verify)` markers in `packages/core/src/rules`._
+Collected from `TODO(verify)` markers in `packages/core/src`. Each one is also surfaced to users as the rule's `verifyNote`.
+
+- **Delaware annual report fee.** The engine uses $50, but HB 400 changed several Delaware fees from Aug 1, 2026. Re-check the current corporate annual report fee.
+- **Rules drift: Delaware LLC tax.** HB 400 raised it from $300 to $400 starting with tax year 2026, but Atlas's tax-season guide still says $300. Good Standing uses $400.
+- **Registered agent renewal date.** Assumed to be the incorporation anniversary. Founders confirm the exact date in the Atlas Dashboard.
+- **Form 1120 for non-calendar fiscal years.** The 15th-day-of-the-4th-month rule is applied to every fiscal year end. June 30 year ends historically differed.
+- **No-par stock.** The Assumed Par Value method isn't attempted when any class is no-par, including mixed par/no-par structures.
+- **83(b) source.** No primary IRS source is cited yet for the 30-day window.
+- **Weekend due dates.** Dates are shown as stated (e.g. 1099-NEC on Jan 31, 2027, a Sunday) with a note that the IRS accepts the next business day. Delaware dates aren't adjusted.
+- **As-of dates** record when each value was encoded from the sources listed in BRIEF §6. They aren't independent legal review.
+- **Out of scope:** prorated franchise tax after mid-year share amendments, Large Corporate Filer math, and state taxes outside Delaware. These are detected and flagged, not calculated.
