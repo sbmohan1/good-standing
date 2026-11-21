@@ -7,8 +7,8 @@ import { useEffect, useRef } from "react";
  *
  * A domain-warped noise field is treated as a height map. Normals come from finite differences,
  * the surface reflects a banded studio environment mapped onto a shadow → silver → highlight ramp,
- * and a specular highlight follows the cursor. Moving the mouse presses a soft dent into the metal
- * that relaxes back over time.
+ * and a specular highlight follows the cursor. The cursor pushes the liquid aside, and moving or
+ * clicking drops expanding rings that fade out.
  */
 
 export interface ChromeParams {
@@ -54,6 +54,8 @@ uniform vec2 uRes;
 uniform float uTime;
 uniform vec2 uMouse;
 uniform float uPress;
+uniform vec2 uDrag; // how far the smoothed cursor lags the real one, in uv
+uniform vec3 uRipples[8]; // xy: origin in uv space, z: start time in seconds (negative = unused)
 uniform float uSpeed, uScale, uWarp, uContrast, uSpecPower, uSpecStrength, uTintStrength;
 uniform vec3 uShadow, uSilver, uHighlight, uTint;
 
@@ -85,15 +87,38 @@ float fbm(vec2 p) {
   return sum;
 }
 
+// Expanding rings from where the cursor has been, like drops on molten metal.
+float ripples(vec2 p) {
+  vec2 aspect = vec2(uRes.x / uRes.y, 1.0);
+  float h = 0.0;
+  for (int i = 0; i < 8; i++) {
+    float age = uTime - uRipples[i].z;
+    if (uRipples[i].z < 0.0 || age < 0.0 || age > 4.0) continue;
+    vec2 c = (uRipples[i].xy - 0.5) * aspect * uScale * 0.6;
+    float w = length(p - c) - age * 0.55;
+    h += 0.2 * exp(-w * w * 5.0) * sin(w * 16.0) * exp(-age * 0.75);
+  }
+  return h;
+}
+
 float heightAt(vec2 p, float t, vec2 m) {
+  // Around the cursor the liquid is dragged along, swirled and pushed aside.
+  vec2 aspect = vec2(uRes.x / uRes.y, 1.0);
+  vec2 dm = p - m;
+  float near = exp(-dot(dm, dm) * 1.2);
+  vec2 p0 = p;
+  p -= uDrag * aspect * uScale * 0.6 * near * 2.2;
+  float a = near * (0.6 + 1.4 * uPress);
+  p = m + mat2(cos(a), -sin(a), sin(a), cos(a)) * dm;
+  p += dm * near * 0.6 * uPress;
   vec2 q = vec2(fbm(p + vec2(0.0, t)), fbm(p + vec2(5.2, 1.3) - 0.7 * t));
   vec2 r = vec2(fbm(p + uWarp * q + vec2(1.7, 9.2) + 0.3 * t), fbm(p + uWarp * q + vec2(8.3, 2.8) - 0.2 * t));
   float h = fbm(p + uWarp * r);
   vec2 d = p - m;
   float dist2 = dot(d, d);
   // A soft dent plus a ring, so the metal looks pressed and rippling.
-  h -= uPress * 0.28 * exp(-dist2 * 2.2);
-  h += uPress * 0.06 * sin(sqrt(dist2) * 9.0 - uTime * 3.0) * exp(-dist2 * 1.1);
+  h -= uPress * 0.22 * exp(-dist2 * 2.2);
+  h += ripples(p0);
   return h;
 }
 
@@ -102,7 +127,7 @@ void main() {
   // 0.6 maps the editor-style "scale" onto broad, slow folds.
   vec2 p = (vUv - 0.5) * aspect * uScale * 0.6;
   vec2 m = (uMouse - 0.5) * aspect * uScale * 0.6;
-  float t = uTime * uSpeed;
+  float t = uTime * uSpeed * 0.3;
 
   float e = 0.012;
   float h = heightAt(p, t, m);
@@ -196,6 +221,10 @@ export function LiquidChrome({ params = DEFAULT_CHROME }: { params?: ChromeParam
     const uTime = u("uTime");
     const uMouse = u("uMouse");
     const uPress = u("uPress");
+    const uRipples = u("uRipples");
+    const uDrag = u("uDrag");
+    const ripples = new Float32Array(8 * 3).fill(-1);
+    let nextRipple = 0;
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // Render below native resolution: the surface is soft, and this keeps laptops cool.
@@ -214,18 +243,32 @@ export function LiquidChrome({ params = DEFAULT_CHROME }: { params?: ChromeParam
     const mouse = { x: 0.5, y: 0.5 };
     let press = 0;
     let energy = 0;
+    const start = performance.now();
+    const last = { x: -1, y: -1, at: 0 };
+    const emit = (x: number, y: number) => {
+      const now = (performance.now() - start) / 1000;
+      ripples.set([x, y, now], nextRipple * 3);
+      nextRipple = (nextRipple + 1) % 8;
+      last.x = x;
+      last.y = y;
+      last.at = now;
+    };
     const onMove = (event: PointerEvent) => {
       const nx = event.clientX / window.innerWidth;
       const ny = 1 - event.clientY / window.innerHeight;
       energy = Math.min(1, energy + Math.hypot(nx - target.x, ny - target.y) * 6);
       target.x = nx;
       target.y = ny;
+      // Drop a new ring once the cursor has travelled far enough, at most every 120 ms.
+      const now = (performance.now() - start) / 1000;
+      if (Math.hypot(nx - last.x, ny - last.y) > 0.06 && now - last.at > 0.12) emit(nx, ny);
     };
+    const onDown = (event: PointerEvent) => emit(event.clientX / window.innerWidth, 1 - event.clientY / window.innerHeight);
     window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerdown", onDown, { passive: true });
 
     let frame = 0;
     let running = true;
-    const start = performance.now();
     const draw = (now: number) => {
       mouse.x += (target.x - mouse.x) * 0.06;
       mouse.y += (target.y - mouse.y) * 0.06;
@@ -234,6 +277,8 @@ export function LiquidChrome({ params = DEFAULT_CHROME }: { params?: ChromeParam
       gl.uniform1f(uTime, reduceMotion ? 12 : (now - start) / 1000);
       gl.uniform2f(uMouse, mouse.x, mouse.y);
       gl.uniform1f(uPress, press);
+      gl.uniform3fv(uRipples, ripples);
+      gl.uniform2f(uDrag, target.x - mouse.x, target.y - mouse.y);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       if (running && !reduceMotion) frame = requestAnimationFrame(draw);
     };
@@ -251,6 +296,7 @@ export function LiquidChrome({ params = DEFAULT_CHROME }: { params?: ChromeParam
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onDown);
       document.removeEventListener("visibilitychange", onVisibility);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     };
