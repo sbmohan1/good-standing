@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+coverage/
+*.tsbuildinfo
+.DS_Store
+
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+
+# Local company record written by the MCP server (user-controlled, private)
+.good-standing/
