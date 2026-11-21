@@ -35,8 +35,10 @@ const MAX_TAX = 200_000;
 // TODO(verify): $50 is the annual report fee before Delaware HB 400, which raised several fees
 // effective Aug 1, 2026. Confirm the current domestic-corporation annual report fee.
 export const ANNUAL_REPORT_FEE_USD = 50;
+// Partial check 2026-11-21: https://corp.delaware.gov/paytaxes/ still lists a $50 annual report fee
+// for non-exempt domestic corporations. Keep the TODO until HB 400's fee schedule is read directly.
 export const ANNUAL_REPORT_FEE_VERIFY_NOTE =
-  "Annual report fee of $50 to be re-checked against Delaware HB 400's fee schedule (fees changed Aug 1, 2026).";
+  "Annual report fee of $50 to be re-checked against Delaware HB 400's fee schedule (fees changed Aug 1, 2026). Delaware's paytaxes page listed $50 on 2026-11-21.";
 
 export const LATE_PENALTY = "$200 late penalty plus 1.5% interest per month on the unpaid tax.";
 

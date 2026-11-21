@@ -1,0 +1,24 @@
+{
+  "name": "@good-standing/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Good Standing MCP server: compliance calendar, franchise tax and filing prep for Stripe Atlas founders. Not affiliated with Stripe.",
+  "type": "module",
+  "bin": {
+    "good-standing-mcp": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=../../.env src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@good-standing/core": "workspace:*",
+    "@good-standing/extract": "workspace:*",
+    "@modelcontextprotocol/server": "^2.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
+    "@types/node": "^24.0.0"
+  }
+}

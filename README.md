@@ -32,7 +32,7 @@ _Status: work in progress. See [BRIEF.md](./BRIEF.md) for the full spec._
 | --- | --- |
 | `packages/core` | Schema, rules registry, franchise tax engine, calendar builder. Pure functions, fully tested. |
 | `packages/extract` | PDF → `CompanyRecord` extraction with Claude, with every quote verified against the PDF's own text. |
-| `packages/mcp` | MCP server for Claude Code, Claude Desktop and Cursor. _(Phase 3)_ |
+| `packages/mcp` | MCP server for Claude Code, Claude Desktop and Cursor (stdio). |
 | `apps/web` | One-page demo (Next.js). _(Phase 5)_ |
 
 ## Develop
@@ -63,7 +63,68 @@ Documents are processed in memory. Their contents are never written to disk or l
 
 ## Install the MCP server
 
-_TODO (Phase 3)._
+You need Node 22.18+ and pnpm. The server runs straight from TypeScript source, with no build step.
+
+```bash
+git clone <this repo> good-standing && cd good-standing
+pnpm install
+cp .env.example .env    # add ANTHROPIC_API_KEY; only needed for ingest_documents
+```
+
+### Claude Code
+
+This repo ships a project `.mcp.json`, so open Claude Code in the repo and approve the `good-standing` server. To use it from another project, add this to that project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "good-standing": {
+      "command": "node",
+      "args": ["--env-file-if-exists=/ABSOLUTE/PATH/good-standing/.env", "/ABSOLUTE/PATH/good-standing/packages/mcp/src/index.ts"]
+    }
+  }
+}
+```
+
+The record is written to `./.good-standing/record.json` in the directory Claude Code runs from.
+
+### Claude Desktop
+
+Add this to `claude_desktop_config.json` (Settings → Developer → Edit Config). Use absolute paths, including the output of `which node`, because Desktop doesn't start in your project folder:
+
+```json
+{
+  "mcpServers": {
+    "good-standing": {
+      "command": "/ABSOLUTE/PATH/TO/node",
+      "args": ["--env-file-if-exists=/ABSOLUTE/PATH/good-standing/.env", "/ABSOLUTE/PATH/good-standing/packages/mcp/src/index.ts"],
+      "env": { "GOOD_STANDING_HOME": "/ABSOLUTE/PATH/where/you/keep/the/record" }
+    }
+  }
+}
+```
+
+### Try it
+
+1. "Load the demo company", or "Ingest my Certificate of Incorporation at ~/Documents/coi.pdf".
+2. Answer the questions it asks, and confirm the extracted values.
+3. "What does my company owe this year?"
+
+### Tools
+
+| Tool | What it does |
+| --- | --- |
+| `ingest_documents` | Extract facts from formation PDFs, each with a page, a verified quote and a needs-confirmation status. |
+| `get_company_record` | The record, with each field's status and source, plus open questions. |
+| `set_company_facts` | Record founder answers and corrections, or confirm extracted values as-is (the document citation is kept). |
+| `load_demo_company` | Load the fictional Lumen Labs record so you can try it without documents. |
+| `compliance_calendar` | "What do I owe?": a headline, then applies / may apply / not required, with dates, amounts, penalties, reasons and sources. |
+| `franchise_tax_estimate` | Both Delaware methods with full workings, the notice-vs-actual gap and installments. Refuses until its inputs are confirmed. |
+| `prepare_filing_packet` | A Markdown packet for the Delaware annual report, saved to `.good-standing/packets/`. |
+| `first_30_days_check` | EIN, 83(b), bank account, how investor money should arrive, backup payment method, registered agent date. |
+| `explain` | Grounds an answer in the rules registry and the record, or says "I don't know, ask a tax professional." |
+
+`GOOD_STANDING_TODAY=YYYY-MM-DD` pins the date, which is useful when recording a demo.
 
 ## Rules and sources
 
@@ -81,6 +142,7 @@ Collected from `TODO(verify)` markers in `packages/core/src`. Each one is also s
 - **83(b) source.** No primary IRS source is cited yet for the 30-day window.
 - **Composite fields are partly verified.** Only the key number is checked inside the quote: authorized shares and par for share classes, the amount for SAFEs. A SAFE's date and investor name, and the purchaser's name, are checked only through the quote match.
 - **Founder stock issue date** is taken from the stock purchase agreement's date. The founder confirms that the shares were issued that day.
+- **Atlas Dashboard link.** `https://dashboard.stripe.com/atlas` couldn't be confirmed because it sits behind a Stripe login.
 - **Weekend due dates.** Dates are shown as stated (e.g. 1099-NEC on Jan 31, 2027, a Sunday) with a note that the IRS accepts the next business day. Delaware dates aren't adjusted.
 - **As-of dates** record when each value was encoded from the sources listed in BRIEF §6. They aren't independent legal review.
 - **Out of scope:** prorated franchise tax after mid-year share amendments, Large Corporate Filer math, and state taxes outside Delaware. These are detected and flagged, not calculated.
