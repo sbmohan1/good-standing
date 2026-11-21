@@ -123,6 +123,11 @@ Add this to `claude_desktop_config.json` (Settings → Developer → Edit Config
 | `prepare_filing_packet` | A Markdown packet for the Delaware annual report, saved to `.good-standing/packets/`. |
 | `first_30_days_check` | EIN, 83(b), bank account, how investor money should arrive, backup payment method, registered agent date. |
 | `explain` | Grounds an answer in the rules registry and the record, or says "I don't know, ask a tax professional." |
+| `fetch_stripe_hints` | Optional. Reads your Stripe balance (and Treasury cash) with a read-only agent key, as a gross-assets hint to confirm against your balance sheet. Never writes to the record or to Stripe. |
+
+### Optional: Stripe hints
+
+Create a **restricted key with the Agent tag** in the Stripe Dashboard. Give it read-only permissions: Balance: Read, plus Treasury financial accounts: Read if you use Treasury. Then set `STRIPE_AGENT_KEY=rk_...` in `.env`. Full-access secret keys (`sk_...`) are refused, because Stripe's MCP stops accepting them, along with untagged restricted keys, in December 2026. `pnpm --filter @good-standing/mcp stripe:check` runs the live check.
 
 `GOOD_STANDING_TODAY=YYYY-MM-DD` pins the date, which is useful when recording a demo.
 
@@ -142,6 +147,8 @@ Collected from `TODO(verify)` markers in `packages/core/src`. Each one is also s
 - **83(b) source.** No primary IRS source is cited yet for the 30-day window.
 - **Composite fields are partly verified.** Only the key number is checked inside the quote: authorized shares and par for share classes, the amount for SAFEs. A SAFE's date and investor name, and the purchaser's name, are checked only through the quote match.
 - **Founder stock issue date** is taken from the stock purchase agreement's date. The founder confirms that the shares were issued that day.
+- **Agent tag can't be checked locally.** Good Standing refuses `sk_` keys and requires `rk_` keys, but it can't see whether a restricted key carries the Agent tag or is limited to read permissions. Stripe enforces that.
+- **Stripe hints are USD only.** Other currencies are listed but not converted.
 - **Atlas Dashboard link.** `https://dashboard.stripe.com/atlas` couldn't be confirmed because it sits behind a Stripe login.
 - **Weekend due dates.** Dates are shown as stated (e.g. 1099-NEC on Jan 31, 2027, a Sunday) with a note that the IRS accepts the next business day. Delaware dates aren't adjusted.
 - **As-of dates** record when each value was encoded from the sources listed in BRIEF §6. They aren't independent legal review.

@@ -5,6 +5,7 @@ import { anthropicExtractionModel, type ExtractionModel } from "@good-standing/e
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { createServer } from "./server.ts";
 import { defaultStoreDir, fileRecordStore } from "./store.ts";
+import { stripeReader } from "./stripeHints.ts";
 
 /** Local calendar date, or GOOD_STANDING_TODAY (YYYY-MM-DD) to pin it for demos. */
 function today(): string {
@@ -28,6 +29,8 @@ async function main(): Promise<void> {
       await mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
       await writeFile(file, text, { mode: 0o600 });
     },
+    stripeKey: process.env.STRIPE_AGENT_KEY || undefined,
+    stripeReader,
   });
 
   // stdout carries the MCP protocol; anything else goes to stderr.

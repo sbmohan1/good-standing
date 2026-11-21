@@ -40,6 +40,7 @@ describe("MCP server over stdio", () => {
     expect(tools.map((t) => t.name).sort()).toEqual([
       "compliance_calendar",
       "explain",
+      "fetch_stripe_hints",
       "first_30_days_check",
       "franchise_tax_estimate",
       "get_company_record",

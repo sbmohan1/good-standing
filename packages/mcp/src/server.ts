@@ -4,6 +4,7 @@ import { withFooter } from "./render.ts";
 import {
   complianceCalendar,
   explain,
+  fetchStripeHintsTool,
   firstThirtyDays,
   franchiseTaxEstimate,
   getCompanyRecord,
@@ -21,10 +22,11 @@ export const SERVER_INSTRUCTIONS = `Good Standing keeps a Stripe Atlas–formed 
 How to use it:
 1. Start with get_company_record. If there's no record, ask for the founder's Certificate of Incorporation and stock purchase agreement PDFs and call ingest_documents, or call load_demo_company to try the fictional demo.
 2. Show the founder each extracted value with its page and quote. Record what they accept or correct with set_company_facts, and ask the listed questions (gross assets, founder residency, contractors, other states).
-3. For "what does my company owe?", call compliance_calendar and lead with its headline. Use franchise_tax_estimate for the full math and prepare_filing_packet for the filing packet.
-4. Never compute amounts or dates yourself; use the numbers and dates the tools return, with their sources. For questions, call explain and answer only from what it returns.
-5. Read-only: nothing here files, pays, or writes to Stripe. The founder files.
-6. Keep the "Information, not tax or legal advice" footer in your answer.`;
+3. If the founder doesn't know gross assets, fetch_stripe_hints can show their Stripe balance as a starting hint; they must still give the Schedule L total assets.
+4. For "what does my company owe?", call compliance_calendar and lead with its headline. Use franchise_tax_estimate for the full math and prepare_filing_packet for the filing packet.
+5. Never compute amounts or dates yourself; use the numbers and dates the tools return, with their sources. For questions, call explain and answer only from what it returns.
+6. Read-only: nothing here files, pays, or writes to Stripe. The founder files.
+7. Keep the "Information, not tax or legal advice" footer in your answer.`;
 
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 const LOCAL_WRITE = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
@@ -147,6 +149,17 @@ export function createServer(deps: ToolDeps): McpServer {
       annotations: READ_ONLY,
     },
     async (input: z.infer<typeof inputSchemas.explain>) => respond(() => explain(deps, input))(),
+  );
+
+  server.registerTool(
+    "fetch_stripe_hints",
+    {
+      title: "Stripe balance hint (read-only)",
+      description:
+        "Optional. Read the Stripe balance (and Treasury cash, if the key allows) with a read-only Stripe agent key, as a hint for gross assets. Labeled as a hint to confirm against the balance sheet; never writes to the record or to Stripe.",
+      annotations: { ...READ_ONLY, idempotentHint: false, openWorldHint: true },
+    },
+    async () => respond(() => fetchStripeHintsTool(deps))(),
   );
 
   return server;

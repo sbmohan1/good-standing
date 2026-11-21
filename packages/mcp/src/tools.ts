@@ -24,6 +24,7 @@ import { explainGrounding } from "./explain.ts";
 import { displayValue, FIELDS } from "./fields.ts";
 import { openQuestions, renderCalendar, renderEstimate, renderRecord } from "./render.ts";
 import type { RecordStore } from "./store.ts";
+import { checkAgentKey, fetchStripeHints, renderStripeHints, type StripeReader } from "./stripeHints.ts";
 
 export interface ToolDeps {
   store: RecordStore;
@@ -36,6 +37,9 @@ export interface ToolDeps {
   /** Where to write packet files; null to skip writing. */
   packetDir: string | null;
   writeFile?: (file: string, text: string) => Promise<void>;
+  /** The configured Stripe agent key (never logged or echoed). */
+  stripeKey?: string;
+  stripeReader?: (key: string) => StripeReader;
 }
 
 export interface ToolResult {
@@ -304,3 +308,15 @@ export async function explain(deps: ToolDeps, input: z.infer<typeof inputSchemas
   return { text: explainGrounding(input.question, record, { taxYear: ctx.taxYear, today: ctx.today }) };
 }
 
+
+export async function fetchStripeHintsTool(deps: ToolDeps): Promise<ToolResult> {
+  const check = checkAgentKey(deps.stripeKey);
+  if (!check.ok) return { isError: true, text: check.reason };
+  if (!deps.stripeReader) return { isError: true, text: "Stripe hints aren't available in this build." };
+  const key = deps.stripeKey as string;
+  const hints = await fetchStripeHints(deps.stripeReader(key), {
+    now: deps.now(),
+    mode: key.startsWith("rk_test_") ? "test" : "live",
+  });
+  return { text: renderStripeHints(hints) };
+}
