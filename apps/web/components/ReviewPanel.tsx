@@ -36,8 +36,8 @@ function Citation({ record, field }: { record: CompanyRecord; field: CompanyReco
   return <span className="cite muted">Stripe {p.object}.{p.field}</span>;
 }
 
-/** Inline editor for the document facts we know how to edit as a single value. */
-function FieldEditor({ record, field, onSave, onCancel }: { record: CompanyRecord; field: CompanyRecordField; onSave: Update; onCancel: () => void }) {
+/** Inline editor for the facts we know how to edit as a single value. */
+export function FieldEditor({ record, field, onSave, onCancel }: { record: CompanyRecord; field: CompanyRecordField; onSave: Update; onCancel?: () => void }) {
   const fact = record[field];
   const initial = (() => {
     if (field === "shareClasses") {
@@ -58,6 +58,11 @@ function FieldEditor({ record, field, onSave, onCancel }: { record: CompanyRecor
         onSave(setUserFact(record, field, [{ name: initial.name, authorizedShares: authorized, parValue: par }]));
         return;
       }
+      case "grossAssets": {
+        const n = Number(a.replace(/[$,\s]/g, ""));
+        if (a.trim() && Number.isFinite(n) && n >= 0) onSave(setUserFact(record, field, n));
+        return;
+      }
       case "issuedShares": {
         const n = Number(a.replace(/,/g, ""));
         if (Number.isInteger(n) && n >= 0) onSave(setUserFact(record, field, n));
@@ -71,7 +76,9 @@ function FieldEditor({ record, field, onSave, onCancel }: { record: CompanyRecor
     }
   };
 
-  const type = field === "incorporationDate" || field === "founderStockIssueDate" ? "date" : field === "issuedShares" ? "text" : "text";
+  const type = field === "incorporationDate" || field === "founderStockIssueDate" ? "date" : "text";
+  const numeric = field === "issuedShares" || field === "shareClasses" || field === "grossAssets";
+  const placeholder = field === "shareClasses" ? "Authorized shares" : field === "issuedShares" ? "e.g. 8,000,000" : field === "grossAssets" ? "e.g. $50,000" : "";
   return (
     <div className="editor">
       {field === "entityType" ? (
@@ -80,15 +87,17 @@ function FieldEditor({ record, field, onSave, onCancel }: { record: CompanyRecor
           <option value="llc">LLC</option>
         </select>
       ) : (
-        <input type={type} inputMode={field === "issuedShares" || field === "shareClasses" ? "numeric" : undefined} value={a} onChange={(e) => setA(e.target.value)} aria-label={FIELDS[field].label} placeholder={field === "shareClasses" ? "Authorized shares" : ""} />
+        <input type={type} inputMode={numeric ? "decimal" : undefined} value={a} onChange={(e) => setA(e.target.value)} aria-label={FIELDS[field].label} placeholder={placeholder} />
       )}
       {field === "shareClasses" ? <input type="text" inputMode="decimal" value={b} onChange={(e) => setB(e.target.value)} aria-label="Par value" placeholder="Par value (blank = no par)" /> : null}
       <button type="button" className="btn btn-small" onClick={save}>
         Save
       </button>
-      <button type="button" className="btn btn-small btn-ghost" onClick={onCancel}>
-        Cancel
-      </button>
+      {onCancel ? (
+        <button type="button" className="btn btn-small btn-ghost" onClick={onCancel}>
+          Cancel
+        </button>
+      ) : null}
     </div>
   );
 }

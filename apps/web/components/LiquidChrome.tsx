@@ -155,6 +155,12 @@ void main() {
   float fresnel = pow(1.0 - clamp(n.z, 0.0, 1.0), 1.5);
   col = mix(col, col + uTint, uTintStrength + fresnel * 0.25);
 
+  // Mute: pull everything most of the way back toward the shadow color and drain some color,
+  // so the chrome reads as a quiet backdrop rather than the subject.
+  float luma = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(col, vec3(luma), 0.35);
+  col = mix(uShadow, col, 0.45);
+
   // Vignette back into the shadow color so text stays readable at the edges.
   vec2 v = vUv - 0.5;
   col = mix(col, uShadow, smoothstep(0.35, 0.95, length(v * vec2(1.1, 1.3))));
@@ -237,7 +243,6 @@ export function LiquidChrome({ params = DEFAULT_CHROME }: { params?: ChromeParam
       gl.uniform2f(uRes, canvas.width, canvas.height);
     };
     resize();
-    window.addEventListener("resize", resize);
 
     const target = { x: 0.5, y: 0.5 };
     const mouse = { x: 0.5, y: 0.5 };
@@ -284,6 +289,16 @@ export function LiquidChrome({ params = DEFAULT_CHROME }: { params?: ChromeParam
     };
     frame = requestAnimationFrame(draw);
 
+    // Resizing clears the canvas; with reduced motion there's no loop to repaint it, so redraw once.
+    const onResize = () => {
+      resize();
+      if (reduceMotion) {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(draw);
+      }
+    };
+    window.addEventListener("resize", onResize);
+
     const onVisibility = () => {
       cancelAnimationFrame(frame);
       running = !document.hidden;
@@ -294,7 +309,7 @@ export function LiquidChrome({ params = DEFAULT_CHROME }: { params?: ChromeParam
     return () => {
       running = false;
       cancelAnimationFrame(frame);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", onResize);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
       document.removeEventListener("visibilitychange", onVisibility);

@@ -4,17 +4,27 @@ import {
   buildFilingPacket,
   type CalendarEntry,
   type CompanyRecord,
+  type CompanyRecordField,
   estimateFranchiseTax,
   FIELDS,
   formatDate,
   summarizeObligations,
   usd,
 } from "@good-standing/core";
+import { confirmFields } from "../lib/records";
 import { CountUp, Reveal, TiltCard } from "./motion";
+import { FieldEditor } from "./ReviewPanel";
 
 type Ctx = { taxYear: number; today: string };
 
-export function OweCard({ record, ctx }: { record: CompanyRecord; ctx: Ctx }) {
+const WHERE_FROM: Partial<Record<CompanyRecordField, string>> = {
+  issuedShares: "Usually in your stock purchase agreement. Upload it too, or enter the total shares issued (including treasury shares).",
+  shareClasses: "In your Certificate of Incorporation, under authorized stock.",
+  grossAssets: "Total assets from your Form 1120, Schedule L. Not your bank or Stripe balance.",
+  entityType: "C-corp or LLC, from your formation documents.",
+};
+
+export function OweCard({ record, ctx, onChange }: { record: CompanyRecord; ctx: Ctx; onChange: (next: CompanyRecord) => void }) {
   const estimate = estimateFranchiseTax(record, { taxYear: ctx.taxYear });
 
   if (estimate.status === "not_applicable") {
@@ -30,13 +40,28 @@ export function OweCard({ record, ctx }: { record: CompanyRecord; ctx: Ctx }) {
       <div className="panel glass locked">
         <p className="eyebrow">Delaware says / you owe</p>
         <h3>Not calculated yet</h3>
-        <p className="muted">Good Standing won't guess. Confirm these and the estimate appears:</p>
+        <p className="muted">Good Standing won't guess. Fill in or confirm these and the estimate appears:</p>
         <ul className="todo">
-          {estimate.missing.map((m) => (
-            <li key={m.field}>
-              <span className="pill pill-warn">{FIELDS[m.field].label}</span> {m.reason}
-            </li>
-          ))}
+          {estimate.missing.map((m) => {
+            const fact = record[m.field];
+            return (
+              <li key={m.field}>
+                <div className="todo-head">
+                  <span className="pill pill-warn">{FIELDS[m.field].label}</span> {m.reason}
+                </div>
+                {fact.status === "needs_confirmation" && fact.value !== null ? (
+                  <button type="button" className="btn btn-small" onClick={() => onChange(confirmFields(record, [m.field]))}>
+                    Confirm
+                  </button>
+                ) : (
+                  <>
+                    {WHERE_FROM[m.field] ? <p className="muted small">{WHERE_FROM[m.field]}</p> : null}
+                    <FieldEditor key={m.field} record={record} field={m.field} onSave={onChange} />
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     );

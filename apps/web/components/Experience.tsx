@@ -180,7 +180,7 @@ export function Experience() {
             </Magnetic>
             <input ref={fileInput} type="file" accept="application/pdf" multiple hidden onChange={(e) => upload(e.target.files)} />
           </div>
-          <p className="fine mono">PDF · up to 4 MB · processed in memory, never stored</p>
+          <p className="fine mono">Add your stock purchase agreement too, for issued shares · PDF · up to 4 MB · processed in memory, never stored</p>
           <AgentCard />
         </section>
 
@@ -297,7 +297,7 @@ export function Experience() {
                 <Questions key={mode} record={record} onChange={setRecord} founderHints={report?.founderHints ?? []} />
               </div>
               <Reveal>
-                <OweCard record={record} ctx={ctx} />
+                <OweCard record={record} ctx={ctx} onChange={setRecord} />
               </Reveal>
               <div className="flow-calendar">
                 <div className="section-mini">

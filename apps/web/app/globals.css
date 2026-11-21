@@ -1116,7 +1116,7 @@ input[type="date"] {
   padding: 0;
   margin: 16px 0 0;
   display: grid;
-  gap: 10px;
+  gap: 18px;
   font-size: 14px;
   color: var(--ink-2);
 }
@@ -1399,4 +1399,16 @@ input[type="date"] {
     transform: none;
     opacity: 1;
   }
+}
+
+.locked .todo li {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.locked .todo p {
+  margin: 0;
 }
