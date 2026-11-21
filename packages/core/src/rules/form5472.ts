@@ -1,8 +1,8 @@
-import { cite, describeProvenance } from "../format.js";
-import type { CompanyRecord } from "../schema.js";
-import { deriveForeignOwnership, knownValue } from "../schema.js";
-import { federalReturnDueDate, joinNotes, RULES_AS_OF, weekendNote } from "./shared.js";
-import type { Applicability, Rule } from "./types.js";
+import { cite, describeProvenance } from "../format.ts";
+import type { CompanyRecord } from "../schema.ts";
+import { deriveForeignOwnership, knownValue } from "../schema.ts";
+import { federalReturnDueDate, joinNotes, RULES_AS_OF, weekendNote } from "./shared.ts";
+import type { Applicability, Rule } from "./types.ts";
 
 const FOREIGN_OWNERSHIP_THRESHOLD_PCT = 25;
 

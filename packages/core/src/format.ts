@@ -1,4 +1,4 @@
-import type { Fact, Provenance } from "./schema.js";
+import type { Fact, Provenance } from "./schema.ts";
 
 export const DISCLAIMER =
   "Information, not tax or legal advice. Built for Stripe Atlas founders. Not affiliated with Stripe.";

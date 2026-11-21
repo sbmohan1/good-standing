@@ -1,0 +1,27 @@
+{
+  "name": "@good-standing/extract",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Formation documents (PDF) → CompanyRecord, with page citations and verified quotes.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "samples": "node scripts/generateSamples.ts",
+    "eval": "node --env-file-if-exists=../../.env eval/run.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.12.0",
+    "@good-standing/core": "workspace:*",
+    "unpdf": "^2.2.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "pdf-lib": "^1.17.1"
+  }
+}

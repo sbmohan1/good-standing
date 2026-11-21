@@ -1,10 +1,10 @@
-import { compareIso, fiscalYearEndDate } from "./dates.js";
-import { cite } from "./format.js";
-import { RULES } from "./rules/index.js";
-import { fiscalYearEnd } from "./rules/shared.js";
-import type { Amount, DueDate, Rule, RuleContext } from "./rules/types.js";
-import type { CompanyRecord } from "./schema.js";
-import { knownValue } from "./schema.js";
+import { compareIso, fiscalYearEndDate } from "./dates.ts";
+import { cite } from "./format.ts";
+import { RULES } from "./rules/index.ts";
+import { fiscalYearEnd } from "./rules/shared.ts";
+import type { Amount, DueDate, Rule, RuleContext } from "./rules/types.ts";
+import type { CompanyRecord } from "./schema.ts";
+import { knownValue } from "./schema.ts";
 
 export interface CalendarEntry {
   ruleId: string;

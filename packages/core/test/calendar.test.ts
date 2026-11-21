@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendar, type CalendarEntry } from "../src/calendar.js";
-import { lumenLabsRecord, LUMEN_LABS_TODAY } from "../src/fixtures/lumenLabs.js";
-import { RULES } from "../src/rules/index.js";
+import { buildCalendar, type CalendarEntry } from "../src/calendar.ts";
+import { lumenLabsRecord, LUMEN_LABS_TODAY } from "../src/fixtures/lumenLabs.ts";
+import { RULES } from "../src/rules/index.ts";
 
 const ctx = { taxYear: 2026, today: LUMEN_LABS_TODAY };
 

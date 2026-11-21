@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { lumenLabsRecord } from "../src/fixtures/lumenLabs.js";
-import { CompanyRecordSchema, deriveForeignOwnership, emptyRecord, ProvenanceSchema } from "../src/schema.js";
+import { lumenLabsRecord } from "../src/fixtures/lumenLabs.ts";
+import { CompanyRecordSchema, deriveForeignOwnership, emptyRecord, ProvenanceSchema } from "../src/schema.ts";
 
 describe("CompanyRecord schema", () => {
   it("accepts the demo record and an empty record", () => {

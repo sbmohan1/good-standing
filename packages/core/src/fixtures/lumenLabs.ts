@@ -1,5 +1,5 @@
-import type { CompanyRecord, Fact, Provenance } from "../schema.js";
-import { deriveForeignOwnership } from "../schema.js";
+import type { CompanyRecord, Fact, Provenance } from "../schema.ts";
+import { deriveForeignOwnership } from "../schema.ts";
 
 /**
  * Lumen Labs, Inc.: the fictional demo company from BRIEF §10. Not a real company.
@@ -26,7 +26,7 @@ const founders = [{ name: "Priya Raman", ownershipPct: 100, usTaxResident: false
 export const lumenLabsRecord: CompanyRecord = {
   entityType: fromDoc("c_corp", CERT, 1, "The name of the corporation is Lumen Labs, Inc."),
   legalName: fromDoc("Lumen Labs, Inc.", CERT, 1, "The name of the corporation is Lumen Labs, Inc."),
-  delawareFileNumber: fromDoc("7654321", CERT, 1, "Delaware File Number: 7654321"),
+  delawareFileNumber: fromDoc("SAMPLE-7654321", CERT, 1, "Delaware File Number: SAMPLE-7654321"),
   incorporationDate: fromDoc("2026-02-10", CERT, 2, "Filed with the Delaware Secretary of State on February 10, 2026."),
   fiscalYearEnd: fromUser("12-31"),
   shareClasses: fromDoc(

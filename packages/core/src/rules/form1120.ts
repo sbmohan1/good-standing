@@ -1,5 +1,5 @@
-import { citeEntityType, federalReturnDueDate, fiscalYearEnd, joinNotes, RULES_AS_OF, weekendNote } from "./shared.js";
-import type { Rule } from "./types.js";
+import { citeEntityType, federalReturnDueDate, fiscalYearEnd, joinNotes, RULES_AS_OF, weekendNote } from "./shared.ts";
+import type { Rule } from "./types.ts";
 
 export const form1120: Rule = {
   id: "form-1120",

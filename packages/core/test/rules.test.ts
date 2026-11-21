@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { lumenLabsRecord } from "../src/fixtures/lumenLabs.js";
-import { RULES, getRule } from "../src/rules/index.js";
-import type { CompanyRecord, Fact } from "../src/schema.js";
-import { missing } from "../src/schema.js";
+import { lumenLabsRecord } from "../src/fixtures/lumenLabs.ts";
+import { RULES, getRule } from "../src/rules/index.ts";
+import type { CompanyRecord, Fact } from "../src/schema.ts";
+import { missing } from "../src/schema.ts";
 
 const ctx = { taxYear: 2026, today: "2026-11-21" };
 const user = { kind: "user" as const, answeredAt: "2026-11-21T00:00:00Z" };

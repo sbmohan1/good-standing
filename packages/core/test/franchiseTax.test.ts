@@ -4,9 +4,9 @@ import {
   authorizedSharesMethod,
   calculateFranchiseTax,
   estimateFranchiseTax,
-} from "../src/franchiseTax.js";
-import { lumenLabsRecord } from "../src/fixtures/lumenLabs.js";
-import { missing } from "../src/schema.js";
+} from "../src/franchiseTax.ts";
+import { lumenLabsRecord } from "../src/fixtures/lumenLabs.ts";
+import { missing } from "../src/schema.ts";
 
 describe("Authorized Shares method", () => {
   it("Delaware example A: 10,005 authorized → $335", () => {

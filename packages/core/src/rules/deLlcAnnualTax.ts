@@ -1,7 +1,7 @@
-import { isoDate } from "../dates.js";
-import { usd } from "../format.js";
-import { citeEntityType, RULES_AS_OF } from "./shared.js";
-import type { Rule } from "./types.js";
+import { isoDate } from "../dates.ts";
+import { usd } from "../format.ts";
+import { citeEntityType, RULES_AS_OF } from "./shared.ts";
+import type { Rule } from "./types.ts";
 
 // Delaware HB 400 raised the LLC annual tax from $300 to $400 starting with tax year 2026
 // (payable by June 1, 2027). Stripe Atlas's tax-season guide still says $300 as of RULES_AS_OF:

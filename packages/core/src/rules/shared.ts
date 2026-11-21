@@ -1,7 +1,7 @@
-import { fifteenthOfNthMonthAfter, fiscalYearEndDate, isWeekend } from "../dates.js";
-import { cite } from "../format.js";
-import type { CompanyRecord } from "../schema.js";
-import { knownValue } from "../schema.js";
+import { fifteenthOfNthMonthAfter, fiscalYearEndDate, isWeekend } from "../dates.ts";
+import { cite } from "../format.ts";
+import type { CompanyRecord } from "../schema.ts";
+import { knownValue } from "../schema.ts";
 
 /** Date the rule values in this registry were last checked against BRIEF §6 and its cited sources. */
 export const RULES_AS_OF = "2026-11-21";

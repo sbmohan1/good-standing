@@ -1,13 +1,13 @@
-import { isoDate } from "../dates.js";
+import { isoDate } from "../dates.ts";
 import {
   ANNUAL_REPORT_FEE_VERIFY_NOTE,
   estimateFranchiseTax,
   FRANCHISE_TAX_SOURCES,
   LATE_PENALTY,
   summarizeFranchiseTax,
-} from "../franchiseTax.js";
-import { citeEntityType, RULES_AS_OF } from "./shared.js";
-import type { Rule } from "./types.js";
+} from "../franchiseTax.ts";
+import { citeEntityType, RULES_AS_OF } from "./shared.ts";
+import type { Rule } from "./types.ts";
 
 export const deFranchiseTax: Rule = {
   id: "de-franchise-tax",

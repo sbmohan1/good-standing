@@ -31,7 +31,7 @@ _Status: work in progress. See [BRIEF.md](./BRIEF.md) for the full spec._
 | Path | What |
 | --- | --- |
 | `packages/core` | Schema, rules registry, franchise tax engine, calendar builder. Pure functions, fully tested. |
-| `packages/extract` | PDF → `CompanyRecord` extraction with Claude, plus quote verification. _(Phase 2)_ |
+| `packages/extract` | PDF → `CompanyRecord` extraction with Claude, with every quote verified against the PDF's own text. |
 | `packages/mcp` | MCP server for Claude Code, Claude Desktop and Cursor. _(Phase 3)_ |
 | `apps/web` | One-page demo (Next.js). _(Phase 5)_ |
 
@@ -44,7 +44,22 @@ pnpm lint
 pnpm typecheck
 ```
 
-Requires Node 22+ and pnpm. Copy `.env.example` to `.env` for extraction and the optional Stripe hints.
+Requires Node 22.18+ (TypeScript runs natively, with no build step) and pnpm. Copy `.env.example` to `.env` for extraction and the optional Stripe hints.
+
+```bash
+pnpm --filter @good-standing/extract samples   # regenerate the synthetic Lumen Labs PDFs
+pnpm --filter @good-standing/extract eval      # live extraction eval (calls the Anthropic API; a few cents)
+```
+
+## How extraction stays honest
+
+1. **Claude transcribes.** Each PDF goes to Claude (`ANTHROPIC_MODEL`, default `claude-sonnet-5-5`) as a document block. The answer is constrained by a structured-output schema and must give a page number and a verbatim quote of 25 words or fewer for every field.
+2. **Zod validates.** A stricter schema checks real dates, quote length and page range. One retry is allowed, and it's sent only the validation errors.
+3. **The PDF checks the quote.** `unpdf` pulls the PDF's own text. The quote must appear on the cited page, and the extracted number or date must appear inside the quote. Anything that fails is set to low confidence and listed for the founder.
+4. **The founder confirms.** Extracted facts are always `needs_confirmation`, so the franchise tax engine refuses to run until the founder confirms them. Residency, gross assets, states of operation and contractor payments come from questions, never documents.
+5. **Code does the math.** Sums such as issued shares across several stock purchase agreements, and percentages such as founder ownership hints, are computed in TypeScript, never by the model.
+
+Documents are processed in memory. Their contents are never written to disk or logged. Requests use the API's server-side refusal fallback (`fallbacks: "default"`).
 
 ## Install the MCP server
 
@@ -64,6 +79,8 @@ Collected from `TODO(verify)` markers in `packages/core/src`. Each one is also s
 - **Form 1120 for non-calendar fiscal years.** The 15th-day-of-the-4th-month rule is applied to every fiscal year end. June 30 year ends historically differed.
 - **No-par stock.** The Assumed Par Value method isn't attempted when any class is no-par, including mixed par/no-par structures.
 - **83(b) source.** No primary IRS source is cited yet for the 30-day window.
+- **Composite fields are partly verified.** Only the key number is checked inside the quote: authorized shares and par for share classes, the amount for SAFEs. A SAFE's date and investor name, and the purchaser's name, are checked only through the quote match.
+- **Founder stock issue date** is taken from the stock purchase agreement's date. The founder confirms that the shares were issued that day.
 - **Weekend due dates.** Dates are shown as stated (e.g. 1099-NEC on Jan 31, 2027, a Sunday) with a note that the IRS accepts the next business day. Delaware dates aren't adjusted.
 - **As-of dates** record when each value was encoded from the sources listed in BRIEF §6. They aren't independent legal review.
 - **Out of scope:** prorated franchise tax after mid-year share amendments, Large Corporate Filer math, and state taxes outside Delaware. These are detected and flagged, not calculated.

@@ -1,4 +1,4 @@
-import type { CompanyRecord } from "../schema.js";
+import type { CompanyRecord } from "../schema.ts";
 
 /**
  * Rule shape from BRIEF §6, with one deliberate change: rules receive a context

@@ -1,6 +1,6 @@
-import { knownValue } from "../schema.js";
-import { RULES_AS_OF } from "./shared.js";
-import type { Rule } from "./types.js";
+import { knownValue } from "../schema.ts";
+import { RULES_AS_OF } from "./shared.ts";
+import type { Rule } from "./types.ts";
 
 export const outOfStateOperations: Rule = {
   id: "out-of-state-operations",

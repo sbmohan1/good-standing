@@ -1,13 +1,13 @@
-import { boiReport } from "./boiReport.js";
-import { deFranchiseTax } from "./deFranchiseTax.js";
-import { deLlcAnnualTax } from "./deLlcAnnualTax.js";
-import { election83b } from "./election83b.js";
-import { form1099Nec } from "./form1099Nec.js";
-import { form1120 } from "./form1120.js";
-import { form5472 } from "./form5472.js";
-import { outOfStateOperations } from "./outOfStateOperations.js";
-import { registeredAgent } from "./registeredAgent.js";
-import type { Rule } from "./types.js";
+import { boiReport } from "./boiReport.ts";
+import { deFranchiseTax } from "./deFranchiseTax.ts";
+import { deLlcAnnualTax } from "./deLlcAnnualTax.ts";
+import { election83b } from "./election83b.ts";
+import { form1099Nec } from "./form1099Nec.ts";
+import { form1120 } from "./form1120.ts";
+import { form5472 } from "./form5472.ts";
+import { outOfStateOperations } from "./outOfStateOperations.ts";
+import { registeredAgent } from "./registeredAgent.ts";
+import type { Rule } from "./types.ts";
 
 /** Every rule Good Standing knows about, in BRIEF §6 order. */
 export const RULES: readonly Rule[] = [
@@ -28,4 +28,4 @@ export function getRule(id: string): Rule {
   return rule;
 }
 
-export type { Amount, Applicability, DueDate, Rule, RuleContext } from "./types.js";
+export type { Amount, Applicability, DueDate, Rule, RuleContext } from "./types.ts";

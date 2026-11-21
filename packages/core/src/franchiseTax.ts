@@ -8,10 +8,10 @@
  * exactly, with workings a founder can check line by line.
  */
 
-import { ceilDiv, formatDecimal, parseDecimal, roundToPlaces, SCALE_FACTOR, toNumber } from "./decimal.js";
-import { formatDate, isoDate } from "./dates.js";
-import { count, groupDecimalString, usd } from "./format.js";
-import type { CompanyRecord, CompanyRecordField, Fact, ShareClass } from "./schema.js";
+import { ceilDiv, formatDecimal, parseDecimal, roundToPlaces, SCALE_FACTOR, toNumber } from "./decimal.ts";
+import { formatDate, isoDate } from "./dates.ts";
+import { count, groupDecimalString, usd } from "./format.ts";
+import type { CompanyRecord, CompanyRecordField, Fact, ShareClass } from "./schema.ts";
 
 export const FRANCHISE_TAX_SOURCES = [
   "https://corp.delaware.gov/frtaxcalc/",

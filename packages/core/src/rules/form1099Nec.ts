@@ -1,8 +1,8 @@
-import { isoDate } from "../dates.js";
-import { usd } from "../format.js";
-import { knownValue } from "../schema.js";
-import { RULES_AS_OF, weekendNote } from "./shared.js";
-import type { Rule } from "./types.js";
+import { isoDate } from "../dates.ts";
+import { usd } from "../format.ts";
+import { knownValue } from "../schema.ts";
+import { RULES_AS_OF, weekendNote } from "./shared.ts";
+import type { Rule } from "./types.ts";
 
 // OBBBA raised the 1099-NEC threshold from $600 to $2,000 for payments made in calendar 2026.
 const THRESHOLD_FROM_2026_USD = 2_000;

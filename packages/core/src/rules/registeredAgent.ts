@@ -1,8 +1,8 @@
-import { anniversaryInYear } from "../dates.js";
-import { cite } from "../format.js";
-import { knownValue } from "../schema.js";
-import { RULES_AS_OF } from "./shared.js";
-import type { Rule } from "./types.js";
+import { anniversaryInYear } from "../dates.ts";
+import { cite } from "../format.ts";
+import { knownValue } from "../schema.ts";
+import { RULES_AS_OF } from "./shared.ts";
+import type { Rule } from "./types.ts";
 
 const ATLAS_RENEWAL_USD = 100;
 

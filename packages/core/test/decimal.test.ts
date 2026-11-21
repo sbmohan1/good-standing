@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ceilDiv, formatDecimal, parseDecimal, roundToPlaces, SCALE_FACTOR } from "../src/decimal.js";
+import { ceilDiv, formatDecimal, parseDecimal, roundToPlaces, SCALE_FACTOR } from "../src/decimal.ts";
 
 describe("parseDecimal", () => {
   it("parses plain and exponent notation exactly", () => {
