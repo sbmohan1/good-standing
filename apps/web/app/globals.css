@@ -1412,3 +1412,94 @@ input[type="date"] {
 .locked .todo p {
   margin: 0;
 }
+
+/* ---------- Solid white cards ----------
+   Cards are white for readability. Inside a card the colour tokens flip to dark ink, so every
+   rule that uses var(--ink), var(--line) etc. adapts; controls that had light-on-dark styling
+   get explicit dark-on-white versions below. */
+
+.glass {
+  --ink: #0b0a14;
+  --ink-2: #3a394b;
+  --muted: #6a697e;
+  --line: rgba(11, 10, 20, 0.1);
+  --line-strong: rgba(11, 10, 20, 0.18);
+  --ok: #17784a;
+  --warn: #8a5a00;
+  background: #fff;
+  color: var(--ink);
+  border-color: rgba(11, 10, 20, 0.08);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.7);
+}
+
+.glass input,
+.glass select {
+  background: #f6f6f9;
+  color-scheme: light;
+}
+
+.glass input::placeholder {
+  color: #9a99ab;
+}
+
+.glass input:focus,
+.glass select:focus {
+  background: #fff;
+  border-color: #5b6cff;
+}
+
+.glass .btn {
+  background: rgba(11, 10, 20, 0.05);
+}
+
+.glass .btn:hover {
+  background: rgba(11, 10, 20, 0.1);
+  border-color: rgba(11, 10, 20, 0.3);
+}
+
+.glass .btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.glass .btn-chrome,
+.glass .btn-chrome:hover {
+  background: #0b0a14;
+  color: #fff;
+  box-shadow: 0 10px 30px -12px rgba(11, 10, 20, 0.5);
+}
+
+.glass .segmented {
+  background: #f6f6f9;
+}
+
+.glass .segmented button[aria-pressed="true"],
+.glass .pill-chrome {
+  background: #0b0a14;
+  color: #fff;
+}
+
+.glass .chrome-text {
+  background: linear-gradient(180deg, #0b0a14 0%, #3d3c58 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: none;
+}
+
+.glass .owe-num.struck {
+  color: #9a99ab;
+}
+
+.glass .dot {
+  background: rgba(11, 10, 20, 0.18);
+}
+
+.glass .loader {
+  background: conic-gradient(from 0deg, transparent, #0b0a14);
+}
+
+.glass.tilt::before {
+  background: radial-gradient(500px circle at var(--mx, 50%) var(--my, 0%), rgba(91, 108, 255, 0.06), transparent 45%);
+}
