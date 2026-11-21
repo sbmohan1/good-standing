@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  buildCalendarIcs,
   buildFilingPacket,
   type CalendarEntry,
   type CompanyRecord,
@@ -11,6 +12,7 @@ import {
   summarizeObligations,
   usd,
 } from "@good-standing/core";
+import { downloadText } from "../lib/download";
 import { confirmFields } from "../lib/records";
 import { CountUp, Reveal, TiltCard } from "./motion";
 import { FieldEditor } from "./ReviewPanel";
@@ -190,8 +192,23 @@ function Entry({ e, index }: { e: CalendarEntry; index: number }) {
 export function CalendarView({ record, ctx }: { record: CompanyRecord; ctx: Ctx }) {
   const summary = summarizeObligations(record, ctx);
   const { calendar } = summary;
+  const exportIcs = () => {
+    const { fileName, ics } = buildCalendarIcs(calendar, { companyName: record.legalName.value ?? "Your company", generatedAt: new Date().toISOString() });
+    downloadText(fileName, ics, "text/calendar;charset=utf-8");
+  };
+  const dated = [...calendar.applies, ...calendar.maybe].filter((e) => e.due).length;
   return (
     <div className="calendar">
+      {dated > 0 ? (
+        <div className="cal-export">
+          <p className="muted small">
+            Add {dated} deadline{dated === 1 ? "" : "s"} to Google Calendar, Apple Calendar or Outlook, with reminders 30 and 7 days before.
+          </p>
+          <button type="button" className="btn btn-outline" data-cursor="Save" onClick={exportIcs}>
+            Add to calendar (.ics)
+          </button>
+        </div>
+      ) : null}
       <div className="headline glass">
         {summary.headline.map((h) => (
           <p key={h}>{h}</p>
@@ -239,14 +256,7 @@ export function CalendarView({ record, ctx }: { record: CompanyRecord; ctx: Ctx 
 export function PacketPanel({ record, ctx }: { record: CompanyRecord; ctx: Ctx }) {
   const packet = buildFilingPacket(record, ctx);
   if (packet.status !== "ok") return null;
-  const download = () => {
-    const url = URL.createObjectURL(new Blob([packet.markdown], { type: "text/markdown;charset=utf-8" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = packet.fileName;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
+  const download = () => downloadText(packet.fileName, packet.markdown, "text/markdown;charset=utf-8");
   return (
     <div className="panel glass packet">
       <div>

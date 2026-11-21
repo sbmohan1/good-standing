@@ -17,8 +17,9 @@ export function documentFields(record: CompanyRecord): CompanyRecordField[] {
   return (Object.keys(record) as CompanyRecordField[]).filter((k) => record[k].provenance?.kind === "document");
 }
 
-export function setUserFact<K extends CompanyRecordField>(record: CompanyRecord, key: K, value: CompanyRecord[K]["value"]): CompanyRecord {
-  const next = { ...record, [key]: { value, status: "confirmed", provenance: { kind: "user", answeredAt: new Date().toISOString() } } } as CompanyRecord;
+export function setUserFact<K extends CompanyRecordField>(record: CompanyRecord, key: K, value: CompanyRecord[K]["value"], detail?: string): CompanyRecord {
+  const provenance = { kind: "user", answeredAt: new Date().toISOString(), ...(detail ? { detail } : {}) };
+  const next = { ...record, [key]: { value, status: "confirmed", provenance } } as CompanyRecord;
   if (key === "founders") {
     const founders = next.founders.value ?? [];
     next.foreignOwnershipPct = { value: deriveForeignOwnership(founders).pct, status: "confirmed", provenance: next.founders.provenance };

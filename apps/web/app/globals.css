@@ -1503,3 +1503,253 @@ input[type="date"] {
 .glass.tilt::before {
   background: radial-gradient(500px circle at var(--mx, 50%) var(--my, 0%), rgba(91, 108, 255, 0.06), transparent 45%);
 }
+
+/* ---------- Calendar export ---------- */
+
+.cal-export {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.cal-export p {
+  margin: 0;
+}
+
+/* ---------- Gross assets worksheet ---------- */
+
+.ws-toggle {
+  margin-top: 10px;
+  padding-left: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.worksheet {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #f6f6f9;
+}
+
+.ws-line {
+  display: grid;
+  grid-template-columns: 1fr 150px;
+  gap: 12px;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ws-line > span {
+  display: grid;
+  gap: 2px;
+}
+
+.ws-line input {
+  background: #fff;
+  text-align: right;
+}
+
+.ws-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.worksheet p {
+  margin: 0;
+}
+
+/* ---------- Notice ---------- */
+
+.notice-body p {
+  margin: 0 0 10px;
+  color: var(--ink-2);
+  max-width: 80ch;
+}
+
+.notice-compare {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 40px;
+  margin-bottom: 20px;
+}
+
+.notice-compare > div {
+  display: grid;
+  gap: 4px;
+}
+
+.notice-compare .eyebrow {
+  margin: 0;
+}
+
+.notice-num {
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.struck-soft {
+  color: #9a99ab;
+  text-decoration: line-through;
+  text-decoration-color: var(--warn);
+  text-decoration-thickness: 3px;
+}
+
+.todo-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+}
+
+/* ---------- What if ---------- */
+
+.wi-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 40px;
+}
+
+.wi-inputs {
+  display: grid;
+  gap: 22px;
+}
+
+.wi-field p {
+  margin: 6px 0 0;
+}
+
+.wi-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.wi-label input {
+  width: 170px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.glass input[type="range"] {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: #0b0a14;
+}
+
+.wi-result {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.wi-method {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition:
+    background 0.3s var(--ease),
+    border-color 0.3s var(--ease);
+}
+
+.wi-method .eyebrow {
+  margin: 0;
+}
+
+.wi-method.is-chosen {
+  border-color: #0b0a14;
+  background: #f6f6f9;
+}
+
+.wi-num {
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.wi-method:not(.is-chosen) .wi-num {
+  color: #9a99ab;
+}
+
+.wi-total {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 18px;
+  border-radius: 14px;
+  background: #0b0a14;
+  color: #fff;
+}
+
+.wi-total strong {
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.wi-total .muted {
+  color: #a3a3ba;
+}
+
+.wi-total .pill-ok {
+  color: #a6dcc0;
+  border-color: rgba(166, 220, 192, 0.4);
+}
+
+.wi-total .pill-warn {
+  color: #e9c98b;
+  border-color: rgba(233, 201, 139, 0.4);
+}
+
+/* ---------- Accountant / samples ---------- */
+
+.packet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.samples {
+  margin: 16px 0 0;
+}
+
+.samples a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .wi-grid {
+    grid-template-columns: 1fr;
+  }
+  .ws-line {
+    grid-template-columns: 1fr;
+  }
+}

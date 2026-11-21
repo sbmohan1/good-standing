@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { ModelExtractionSchema } from "./schema.ts";
+import { ModelExtractionSchema, NoticeExtractionSchema } from "./schema.ts";
 
 /**
  * The only place Good Standing talks to an LLM. Claude reads the PDF and transcribes facts with
@@ -12,6 +12,8 @@ export const DEFAULT_MODEL = "claude-sonnet-5-5";
 export interface ModelRequest {
   docName: string;
   pdfBase64: string;
+  /** "document" reads formation facts; "notice" reads the amounts on a Delaware franchise tax notice. */
+  kind: "document" | "notice";
   /** Set on the single retry after a validation failure. Contains schema errors only, never document text. */
   retryFeedback?: string;
 }
@@ -23,7 +25,7 @@ export class ExtractionRefusedError extends Error {
   override name = "ExtractionRefusedError";
 }
 
-export const SYSTEM_PROMPT = `You read US company formation documents (certificates of incorporation, stock purchase agreements, 83(b) election confirmations, SAFEs) and transcribe facts for a compliance tool. A founder will review everything you return.
+export const SYSTEM_PROMPT = `You read US company formation documents (certificates of incorporation, stock purchase agreements, 83(b) election confirmations, SAFEs) and Delaware franchise tax notices and transcribe facts for a compliance tool. A founder will review everything you return.
 
 Rules:
 - Only report a value that is explicitly written in the document. Never infer, estimate, calculate or assume. If a field is not stated, return null for it.
@@ -36,17 +38,19 @@ Rules:
 - stockPurchaseShares: only in a stock purchase agreement; the purchaser's name and the number of shares purchased. stockPurchaseDate: the date of that agreement.
 - election83b: only in an IRS 83(b) election or its confirmation; irsStamped is true only if the document shows an IRS received or filed stamp.
 - safe: only in a SAFE; the investor, the purchase amount, "post_money_cap" if it has a post-money valuation cap otherwise "discount", and its date.
+- A Delaware franchise tax notice or bill is documentType "delaware_franchise_tax_notice"; legalName and delawareFileNumber may appear on it.
 - confidence: "high" when stated plainly, "medium" when the wording is ambiguous, "low" when unsure.
 - Ignore watermarks, page headers and footers.`;
+
+const NOTICE_INSTRUCTIONS = `This is a Delaware franchise tax notice. Transcribe: noticeTaxYear, the tax year the notice bills for; noticeFranchiseTax, the franchise tax amount line only; noticeTotalDue, the total amount due as printed. Transcribe each exactly as printed, with its page and a verbatim quote containing the amount. Never compute one amount from the others; return null for any that isn't printed.`;
 
 export function anthropicExtractionModel(options: { client?: Anthropic; model?: string } = {}): ExtractionModel {
   const client = options.client ?? new Anthropic();
   const model = options.model ?? process.env.ANTHROPIC_MODEL ?? DEFAULT_MODEL;
 
-  return async ({ docName, pdfBase64, retryFeedback }) => {
-    const instructions = retryFeedback
-      ? `Extract the facts from "${docName}". Your previous answer failed validation:\n${retryFeedback}\nReturn a corrected answer.`
-      : `Extract the facts from "${docName}".`;
+  return async ({ docName, pdfBase64, kind, retryFeedback }) => {
+    const task = kind === "notice" ? `${NOTICE_INSTRUCTIONS}\n\nDocument: "${docName}".` : `Extract the facts from "${docName}".`;
+    const instructions = retryFeedback ? `${task}\nYour previous answer failed validation:\n${retryFeedback}\nReturn a corrected answer.` : task;
 
     const response = await client.beta.messages.parse({
       model,
@@ -64,7 +68,7 @@ export function anthropicExtractionModel(options: { client?: Anthropic; model?: 
           ],
         },
       ],
-      output_config: { effort: "medium", format: betaZodOutputFormat(ModelExtractionSchema) },
+      output_config: { effort: "medium", format: kind === "notice" ? betaZodOutputFormat(NoticeExtractionSchema) : betaZodOutputFormat(ModelExtractionSchema) },
     });
 
     if (response.stop_reason === "refusal") {

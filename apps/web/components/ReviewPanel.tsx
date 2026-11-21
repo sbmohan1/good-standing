@@ -6,7 +6,10 @@ import {
   displayValue,
   FIELDS,
   type Founder,
+  GROSS_ASSET_LINES,
   type ShareClass,
+  sumGrossAssets,
+  usd,
 } from "@good-standing/core";
 import { useState } from "react";
 import { clearFact, confirmFields, documentFields, setUserFact } from "../lib/records";
@@ -184,8 +187,46 @@ function YesNo({ value, onChange, allowUnsure = false }: { value: boolean | null
   );
 }
 
+/** Adds up year-end balance-sheet lines when the founder doesn't have Schedule L handy. */
+function GrossAssetsWorksheet({ onUse }: { onUse: (total: number, detail: string) => void }) {
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const result = sumGrossAssets(GROSS_ASSET_LINES.map((l) => ({ label: l.label, amountUsd: amounts[l.id] ?? "" })));
+  const anyEntered = Object.values(amounts).some((v) => v.trim() !== "");
+  return (
+    <div className="worksheet">
+      {GROSS_ASSET_LINES.map((l) => (
+        <label key={l.id} className="ws-line">
+          <span>
+            {l.label}
+            <span className="q-help">{l.help}</span>
+          </span>
+          <input type="text" inputMode="decimal" placeholder="$0" value={amounts[l.id] ?? ""} onChange={(e) => setAmounts({ ...amounts, [l.id]: e.target.value })} />
+        </label>
+      ))}
+      {result.status === "invalid" ? (
+        result.errors.map((e) => (
+          <p key={e} className="warn-note">
+            {e}
+          </p>
+        ))
+      ) : (
+        <div className="ws-total">
+          <span>
+            Total gross assets <strong>{usd(result.totalUsd)}</strong>
+          </span>
+          <button type="button" className="btn btn-small btn-chrome" disabled={!anyEntered} onClick={() => onUse(result.totalUsd, result.detail)}>
+            Use {usd(result.totalUsd)}
+          </button>
+        </div>
+      )}
+      <p className="muted small">Your estimate. Have your accountant check it against total assets on Form 1120, Schedule L.</p>
+    </div>
+  );
+}
+
 export function Questions({ record, onChange, founderHints = [] }: { record: CompanyRecord; onChange: Update; founderHints?: Array<{ name: string; pctOfExtractedShares: number }> }) {
   const [gross, setGross] = useState(record.grossAssets.value == null ? "" : String(record.grossAssets.value));
+  const [worksheet, setWorksheet] = useState(false);
   const [founders, setFounders] = useState<Array<Founder & { residencyKnown: boolean }>>(() => {
     const existing = record.founders.value;
     if (existing && existing.length > 0) return existing.map((f) => ({ ...f, residencyKnown: true }));
@@ -223,6 +264,18 @@ export function Questions({ record, onChange, founderHints = [] }: { record: Com
             {saved("grossAssets") && record.grossAssets.value === grossNumber ? "Saved" : "Save"}
           </button>
         </div>
+        <button type="button" className="btn btn-small btn-ghost ws-toggle" aria-expanded={worksheet} onClick={() => setWorksheet(!worksheet)}>
+          {worksheet ? "Hide worksheet" : "Don't know it? Work it out"}
+        </button>
+        {worksheet ? (
+          <GrossAssetsWorksheet
+            onUse={(total, detail) => {
+              setGross(String(total));
+              setWorksheet(false);
+              onChange(setUserFact(record, "grossAssets", total, detail));
+            }}
+          />
+        ) : null}
       </div>
 
       <div className="q">

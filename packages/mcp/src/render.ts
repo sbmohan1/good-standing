@@ -11,7 +11,7 @@ import {
   type ObligationsSummary,
   usd,
 } from "@good-standing/core";
-import { displayValue, FIELDS } from "@good-standing/core";
+import { displayValue, FIELDS, openQuestions } from "@good-standing/core";
 
 export function withFooter(text: string): string {
   return `${text.trimEnd()}\n\n---\n_${DISCLAIMER}_`;
@@ -64,28 +64,6 @@ export function renderRecord(record: CompanyRecord, opts: { storePath?: string }
 }
 
 /** Questions for missing fields, most important first. */
-export function openQuestions(record: CompanyRecord): string[] {
-  const order: CompanyRecordField[] = [
-    "grossAssets",
-    "founders",
-    "issuedShares",
-    "shareClasses",
-    "entityType",
-    "incorporationDate",
-    "contractorPaymentsByPayee",
-    "statesWithOperations",
-    "atlasCompany",
-    "registeredAgent",
-    "has83bConfirmation",
-    "founderStockIssueDate",
-    "hasReportableRelatedPartyTransactions",
-    "amendedAuthorizedSharesThisYear",
-    "fiscalYearEnd",
-  ];
-  return order
-    .filter((f) => record[f].status === "missing" && FIELDS[f].question)
-    .map((f) => `${FIELDS[f].label}: ${FIELDS[f].question}`);
-}
 
 function renderEntry(e: CalendarEntry): string[] {
   const when = e.due ? `${e.due.approximate ? "~" : ""}${formatDate(e.due.date)}` : "No fixed date";

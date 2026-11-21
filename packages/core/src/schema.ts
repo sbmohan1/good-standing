@@ -21,7 +21,7 @@ export const ProvenanceSchema = z.discriminatedUnion("kind", [
         message: `quote must be ${MAX_QUOTE_WORDS} words or fewer`,
       }),
   }),
-  z.object({ kind: z.literal("user"), answeredAt: z.string().min(1) }),
+  z.object({ kind: z.literal("user"), answeredAt: z.string().min(1), detail: z.string().max(500).optional() }),
   z.object({
     kind: z.literal("stripe"),
     object: z.string().min(1),

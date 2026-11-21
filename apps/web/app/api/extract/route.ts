@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       conflicts: built.conflicts,
       notes: built.notes,
       founderHints: built.founderHints,
+      notice: built.notice,
       failures,
     },
     { headers: { "Cache-Control": "no-store" } },

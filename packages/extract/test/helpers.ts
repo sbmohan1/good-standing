@@ -2,11 +2,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtractionModel } from "../src/model.ts";
-import type { ModelExtraction } from "../src/schema.ts";
+import type { ModelExtraction, NoticeExtraction } from "../src/schema.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const CERT = "Lumen Labs - Certificate of Incorporation (SAMPLE).pdf";
 export const SPA = "Lumen Labs - Stock Purchase Agreement (SAMPLE).pdf";
+export const NOTICE = "Lumen Labs - Delaware Franchise Tax Notice (SAMPLE).pdf";
 
 export async function sample(name: string): Promise<Uint8Array> {
   return new Uint8Array(await readFile(path.join(here, "../samples", name)));
@@ -58,14 +59,34 @@ export const GOLDEN: Record<string, ModelExtraction> = {
     },
     stockPurchaseDate: { value: "2026-02-12", page: 1, quote: "is dated as of February 12, 2026", confidence: "high" },
   },
+  [NOTICE]: {
+    ...none,
+    documentType: "delaware_franchise_tax_notice",
+    legalName: { value: "Lumen Labs, Inc.", page: 1, quote: "Corporation: LUMEN LABS, INC.", confidence: "high" },
+    delawareFileNumber: { value: "SAMPLE-7654321", page: 1, quote: "Delaware File Number: SAMPLE-7654321", confidence: "high" },
+  },
 };
 
-export function fakeModel(answers: unknown[] | ((docName: string) => unknown)): ExtractionModel & { calls: Array<{ docName: string; retryFeedback?: string }> } {
-  const calls: Array<{ docName: string; retryFeedback?: string }> = [];
+/** The second request for a notice: the amounts. */
+export const GOLDEN_NOTICE: NoticeExtraction = {
+  noticeTaxYear: { value: 2026, page: 1, quote: "Tax Year: 2026", confidence: "high" },
+  noticeFranchiseTax: { value: 85_165, page: 1, quote: "Franchise Tax: $85,165.00", confidence: "high" },
+  noticeTotalDue: { value: 85_215, page: 1, quote: "Total Due: $85,215.00", confidence: "high" },
+};
+
+/** Answers like a correct model: formation facts for "document" requests, amounts for "notice" requests. */
+export function goldenAnswer(docName: string, kind: "document" | "notice"): unknown {
+  return kind === "notice" ? GOLDEN_NOTICE : GOLDEN[docName];
+}
+
+export function fakeModel(
+  answers: unknown[] | ((docName: string, kind: "document" | "notice") => unknown),
+): ExtractionModel & { calls: Array<{ docName: string; kind: "document" | "notice"; retryFeedback?: string }> } {
+  const calls: Array<{ docName: string; kind: "document" | "notice"; retryFeedback?: string }> = [];
   let i = 0;
-  const model = (async ({ docName, retryFeedback }) => {
-    calls.push({ docName, retryFeedback });
-    return typeof answers === "function" ? answers(docName) : answers[i++];
+  const model = (async ({ docName, kind, retryFeedback }) => {
+    calls.push({ docName, kind, retryFeedback });
+    return typeof answers === "function" ? answers(docName, kind) : answers[i++];
   }) as ExtractionModel & { calls: typeof calls };
   model.calls = calls;
   return model;

@@ -1,7 +1,17 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  buildAccountantSummary,
+  buildCalendar,
+  buildCalendarIcs,
   buildFilingPacket,
+  calculateFranchiseTax,
+  compareNotice,
+  count,
+  GROSS_ASSET_LINES,
+  type ShareClass,
+  sumGrossAssets,
+  usd,
   type CompanyRecord,
   type CompanyRecordField,
   ContractorPaymentSchema,
@@ -21,8 +31,8 @@ import {
 import { buildRecord, type DocumentExtraction, extractDocument, type ExtractionModel } from "@good-standing/extract";
 import { z } from "zod";
 import { explainGrounding } from "./explain.ts";
-import { displayValue, FIELDS } from "@good-standing/core";
-import { openQuestions, renderCalendar, renderEstimate, renderRecord } from "./render.ts";
+import { displayValue, FIELDS, openQuestions } from "@good-standing/core";
+import { renderCalendar, renderEstimate, renderRecord } from "./render.ts";
 import type { RecordStore } from "./store.ts";
 import { checkAgentKey, fetchStripeHints, renderStripeHints, type StripeReader } from "./stripeHints.ts";
 
@@ -78,6 +88,11 @@ export const FactsSchema = z
 
 const CONFIRMABLE = Object.keys(FactsSchema.shape) as [keyof z.infer<typeof FactsSchema>, ...Array<keyof z.infer<typeof FactsSchema>>];
 
+function worksheetLine(id: (typeof GROSS_ASSET_LINES)[number]["id"]) {
+  const line = GROSS_ASSET_LINES.find((l) => l.id === id)!;
+  return z.union([z.number().nonnegative(), z.string().max(40)]).optional().describe(`${line.label}: ${line.help} USD at year end.`);
+}
+
 export const inputSchemas = {
   ingestDocuments: z.object({
     paths: z.array(z.string().min(1)).min(1).max(10).describe("Paths to PDF files (absolute, or relative to the server's working directory)"),
@@ -91,6 +106,21 @@ export const inputSchemas = {
   }),
   taxYearOnly: z.object({ taxYear }),
   explain: z.object({ question: z.string().min(1).max(2000) }),
+  grossAssetsWorksheet: z.object({
+    cash: worksheetLine("cash"),
+    receivables: worksheetLine("receivables"),
+    equipment: worksheetLine("equipment"),
+    prepaid: worksheetLine("prepaid"),
+    other: worksheetLine("other"),
+    save: z.boolean().optional().describe("Save the total as gross assets. Only after the founder has seen the total and agreed."),
+  }),
+  scenario: z.object({
+    taxYear,
+    authorizedShares: z.number().int().positive().optional().describe("Total authorized shares. Defaults to the record."),
+    parValue: z.number().nonnegative().nullable().optional().describe("Par value per share; null for no-par. Defaults to the record."),
+    issuedShares: z.number().int().nonnegative().optional().describe("Defaults to the record."),
+    grossAssets: z.number().nonnegative().optional().describe("USD. Defaults to the record."),
+  }),
 };
 
 // ---------- Helpers ----------
@@ -148,6 +178,13 @@ export async function ingestDocuments(deps: ToolDeps, input: z.infer<typeof inpu
   }
   if (result.conflicts.length > 0) lines.push("**Conflicts:**", ...result.conflicts.map((c) => `- ${c}`), "");
   if (result.notes.length > 0) lines.push("**Notes:**", ...result.notes.map((n) => `- ${n}`), "");
+  if (result.notice) {
+    const comparison = compareNotice(result.notice, result.record, { defaultTaxYear: ctxFor(deps).taxYear });
+    lines.push("## Delaware franchise tax notice", "", ...comparison.lines.map((l) => `- ${l}`), ...comparison.warnings.map((w) => `- ⚠️ ${w}`), "");
+    if (comparison.status === "needs_confirmation") {
+      lines.push("Once those facts are confirmed, ingest the notice again to see the full comparison.", "");
+    }
+  }
   if (result.founderHints.length > 0) {
     lines.push(
       `**Founders in these documents:** ${result.founderHints.map((h) => `${h.name} (${h.shares.toLocaleString("en-US")} shares, ${h.pctOfExtractedShares}% of shares in these agreements)`).join("; ")}. Ask whether each is a US tax resident; residency never comes from documents.`,
@@ -319,4 +356,95 @@ export async function fetchStripeHintsTool(deps: ToolDeps): Promise<ToolResult> 
     mode: key.startsWith("rk_test_") ? "test" : "live",
   });
   return { text: renderStripeHints(hints) };
+}
+
+// ---------- Calendar export, gross assets, scenarios, accountant summary ----------
+
+async function saveFile(deps: ToolDeps, fileName: string, text: string): Promise<string> {
+  if (!deps.packetDir || !deps.writeFile) return "";
+  const file = path.join(deps.packetDir, fileName);
+  await deps.writeFile(file, text);
+  return file;
+}
+
+export async function exportCalendarIcs(deps: ToolDeps, input: z.infer<typeof inputSchemas.taxYearOnly>): Promise<ToolResult> {
+  const record = await deps.store.load();
+  const ctx = ctxFor(deps, input.taxYear);
+  const calendar = buildCalendar(record, ctx);
+  const { fileName, ics, eventCount } = buildCalendarIcs(calendar, { companyName: record.legalName.value ?? "Your company", generatedAt: deps.now() });
+  if (eventCount === 0) return { text: "There are no dated obligations to export yet. Add more facts to the record first." };
+  const file = await saveFile(deps, fileName, ics);
+  const events = [...calendar.applies, ...calendar.maybe].filter((e) => e.due).map((e) => `- ${e.due!.date}: ${e.status === "maybe" ? "Maybe: " : ""}${e.title}`);
+  return {
+    text: [
+      `## Calendar export, tax year ${ctx.taxYear}`,
+      "",
+      file ? `Saved ${eventCount} events to ${file}. Open it to add them to Google Calendar, Apple Calendar or Outlook. Each has reminders 30 and 7 days before.` : `${eventCount} events (file writing is off in this setup).`,
+      "",
+      ...events,
+    ].join("\n"),
+  };
+}
+
+export async function grossAssetsWorksheet(deps: ToolDeps, input: z.infer<typeof inputSchemas.grossAssetsWorksheet>): Promise<ToolResult> {
+  const lines = GROSS_ASSET_LINES.flatMap((l) => {
+    const amount = input[l.id];
+    return amount === undefined ? [] : [{ label: l.label, amountUsd: amount }];
+  });
+  if (lines.length === 0) {
+    return { text: ["## Gross assets worksheet", "", "Ask the founder for each amount at year end (skip any that are $0):", "", ...GROSS_ASSET_LINES.map((l) => `- **${l.label}:** ${l.help}`)].join("\n") };
+  }
+  const result = sumGrossAssets(lines);
+  if (result.status === "invalid") return { isError: true, text: `Couldn't add these up:\n${result.errors.map((e) => `- ${e}`).join("\n")}` };
+
+  const out = ["## Gross assets worksheet", "", ...result.workings.map((w) => `- ${w}`), "", "This is the founder's estimate. Their accountant should check it against total assets on Form 1120, Schedule L."];
+  if (input.save) {
+    const record = await deps.store.load();
+    record.grossAssets = { value: result.totalUsd, status: "confirmed", provenance: { kind: "user", answeredAt: deps.now(), detail: result.detail } };
+    await deps.store.save(record);
+    out.push("", `Saved gross assets = ${usd(result.totalUsd)}, sourced to the founder with this worksheet.`);
+  } else {
+    out.push("", `If the founder agrees with ${usd(result.totalUsd)}, call this tool again with \`save: true\`.`);
+  }
+  return { text: out.join("\n") };
+}
+
+export async function franchiseTaxScenario(deps: ToolDeps, input: z.infer<typeof inputSchemas.scenario>): Promise<ToolResult> {
+  const record = await deps.store.load();
+  const ctx = ctxFor(deps, input.taxYear);
+  const classes = (record.shareClasses.value ?? []) as ShareClass[];
+  const recordAuthorized = classes.length > 0 ? classes.reduce((sum, c) => sum + c.authorizedShares, 0) : undefined;
+  const recordPar = classes.length === 1 ? classes[0]!.parValue : undefined;
+
+  const authorized = input.authorizedShares ?? recordAuthorized;
+  const par = input.parValue !== undefined ? input.parValue : recordPar;
+  const issued = input.issuedShares ?? record.issuedShares.value ?? undefined;
+  const gross = input.grossAssets ?? record.grossAssets.value ?? undefined;
+  const missing = [authorized === undefined && "authorizedShares", par === undefined && "parValue", issued === undefined && "issuedShares", gross === undefined && "grossAssets"].filter(Boolean);
+  if (missing.length > 0) return { isError: true, text: `Give a value for: ${missing.join(", ")} (the record doesn't have one to default to).` };
+
+  const calc = calculateFranchiseTax({ shareClasses: [{ name: "All classes", authorizedShares: authorized!, parValue: par! }], issuedShares: issued!, grossAssets: gross!, amendedAuthorizedSharesThisYear: record.amendedAuthorizedSharesThisYear.value ?? false, listedOnNationalExchange: record.listedOnNationalExchange.value ?? false }, { taxYear: ctx.taxYear });
+  const apv = calc.assumedParValue;
+  return {
+    text: [
+      `## What if: tax year ${ctx.taxYear}`,
+      "",
+      "_A hypothetical scenario, not the company's record._",
+      "",
+      `Inputs: ${count(authorized!)} authorized shares, par ${par === null ? "none (no-par)" : `$${par}`}, ${count(issued!)} issued shares, ${usd(gross!)} gross assets.`,
+      "",
+      `- Authorized Shares method: ${usd(calc.authorizedShares.taxUsd)}`,
+      `- Assumed Par Value Capital method: ${apv.status === "ok" ? usd(apv.taxUsd) : `not available (${apv.reason})`}`,
+      `- **You'd owe ${usd(calc.totalDueUsd)}** (${usd(calc.taxUsd)} tax + ${usd(calc.annualReportFeeUsd)} annual report fee).`,
+      ...calc.flags.map((f) => `- ⚠️ ${f.message}`),
+    ].join("\n"),
+  };
+}
+
+export async function prepareAccountantSummary(deps: ToolDeps, input: z.infer<typeof inputSchemas.taxYearOnly>): Promise<ToolResult> {
+  const record = await deps.store.load();
+  const ctx = ctxFor(deps, input.taxYear);
+  const { fileName, markdown } = buildAccountantSummary(record, ctx);
+  const file = await saveFile(deps, fileName, markdown);
+  return { text: `${file ? `_Saved a copy to ${file}._\n\n` : ""}${markdown}` };
 }

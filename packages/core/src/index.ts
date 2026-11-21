@@ -11,4 +11,8 @@ export { defaultTaxYear, summarizeObligations, type ObligationsSummary } from ".
 export { buildFilingPacket, type FilingPacket } from "./packet.ts";
 export { firstThirtyDaysCheck, type ChecklistItem, type FirstThirtyDays } from "./firstThirtyDays.ts";
 export { LINKS } from "./links.ts";
-export { FIELDS, displayValue } from "./fields.ts";
+export { FIELDS, displayValue, openQuestions } from "./fields.ts";
+export { buildCalendarIcs, escapeIcsText, foldIcsLine, type IcsOptions } from "./ics.ts";
+export { GROSS_ASSET_LINES, type GrossAssetLine, type GrossAssetLineId, type GrossAssetsWorksheet, sumGrossAssets } from "./grossAssets.ts";
+export { compareNotice, type NoticeComparison, type NoticeFacts, type NoticeValue } from "./notice.ts";
+export { buildAccountantSummary } from "./accountant.ts";

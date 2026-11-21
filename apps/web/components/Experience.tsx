@@ -7,14 +7,17 @@ import {
   defaultTaxYear,
   LUMEN_LABS_TODAY,
   lumenLabsRecord,
+  type NoticeFacts,
   summarizeObligations,
 } from "@good-standing/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { confirmFields, demoRecord, documentFields, localToday } from "../lib/records";
 import { LiquidChrome } from "./LiquidChrome";
 import { Cursor, Magnetic, Reveal, SplitWords } from "./motion";
+import { AccountantPanel, NoticePanel } from "./Extras";
 import { CalendarView, OweCard, PacketPanel } from "./Results";
 import { DocumentFacts, Questions } from "./ReviewPanel";
+import { WhatIf } from "./WhatIf";
 
 const REPO_URL = process.env.NEXT_PUBLIC_REPO_URL;
 
@@ -25,6 +28,38 @@ interface UploadReport {
   notes: string[];
   founderHints: Array<{ name: string; shares: number; pctOfExtractedShares: number }>;
   failures: string[];
+  notice: NoticeFacts | null;
+}
+
+const SAMPLE_FILES = [
+  ["Certificate of Incorporation", "Lumen Labs - Certificate of Incorporation (SAMPLE).pdf"],
+  ["Stock purchase agreement", "Lumen Labs - Stock Purchase Agreement (SAMPLE).pdf"],
+  ["Delaware notice", "Lumen Labs - Delaware Franchise Tax Notice (SAMPLE).pdf"],
+] as const;
+
+function SampleLinks() {
+  return (
+    <p className="muted small samples">
+      No documents handy? Download fictional samples:{" "}
+      {SAMPLE_FILES.map(([label, file], i) => (
+        <span key={file}>
+          {i > 0 ? " · " : ""}
+          <a href={`/samples/${encodeURIComponent(file)}`} download>
+            {label}
+          </a>
+        </span>
+      ))}
+    </p>
+  );
+}
+
+async function postPdfs(files: File[]): Promise<UploadReport & { record: CompanyRecord }> {
+  const body = new FormData();
+  for (const f of files) body.append("files", f);
+  const res = await fetch("/api/extract", { method: "POST", body });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Something went wrong.");
+  return json;
 }
 
 // The hero's sample answer comes from the engine itself, for the fictional demo company.
@@ -89,6 +124,10 @@ export function Experience() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [today, setToday] = useState(LUMEN_LABS_TODAY);
+  const [notice, setNotice] = useState<NoticeFacts | null>(null);
+  const [noticeBusy, setNoticeBusy] = useState(false);
+  const [noticeError, setNoticeError] = useState<string | null>(null);
+  const noticeInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const appRef = useRef<HTMLElement>(null);
 
@@ -109,10 +148,34 @@ export function Experience() {
   const startDemo = useCallback(() => {
     setRecord(demoRecord());
     setReport(null);
+    setNotice(null);
     setError(null);
     setMode("demo");
     scrollToApp();
   }, []);
+
+  const uploadNotice = async (file: File) => {
+    if (file.type && file.type !== "application/pdf") return setNoticeError("Only PDF files, please.");
+    if (file.size > 4 * 1024 * 1024) return setNoticeError("Uploads are limited to 4 MB on this demo.");
+    setNoticeBusy(true);
+    setNoticeError(null);
+    try {
+      const json = await postPdfs([file]);
+      if (!json.notice) throw new Error("I couldn't find a franchise tax amount in that PDF. Is it a Delaware franchise tax notice?");
+      setNotice(json.notice);
+      // A notice on its own still tells us the company's name and file number.
+      if (!record) {
+        setRecord(json.record);
+        setReport(json);
+        setMode("upload");
+        scrollToApp();
+      }
+    } catch (e) {
+      setNoticeError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setNoticeBusy(false);
+    }
+  };
 
   const upload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -124,15 +187,13 @@ export function Experience() {
     setBusy(true);
     setError(null);
     setRecord(null);
+    setNotice(null);
     scrollToApp();
     try {
-      const body = new FormData();
-      for (const f of pdfs) body.append("files", f);
-      const res = await fetch("/api/extract", { method: "POST", body });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Something went wrong.");
-      setRecord(json.record as CompanyRecord);
-      setReport(json as UploadReport);
+      const json = await postPdfs(pdfs);
+      setRecord(json.record);
+      setReport(json);
+      setNotice(json.notice);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -251,7 +312,23 @@ export function Experience() {
                 <button type="button" className="btn btn-outline" onClick={() => fileInput.current?.click()}>
                   Upload PDFs
                 </button>
+                <button type="button" className="btn btn-outline" disabled={noticeBusy} onClick={() => noticeInput.current?.click()}>
+                  {noticeBusy ? "Reading notice…" : "I got a Delaware notice"}
+                </button>
+                <input
+                  ref={noticeInput}
+                  type="file"
+                  accept="application/pdf"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadNotice(file);
+                    e.target.value = "";
+                  }}
+                />
               </div>
+              {noticeError ? <p className="warn-note">{noticeError}</p> : null}
+              <SampleLinks />
             </div>
           ) : null}
 
@@ -299,6 +376,8 @@ export function Experience() {
               <Reveal>
                 <OweCard record={record} ctx={ctx} onChange={setRecord} />
               </Reveal>
+              <NoticePanel record={record} ctx={ctx} notice={notice} onUpload={uploadNotice} busy={noticeBusy} error={noticeError} />
+              <WhatIf key={`${mode}-${record.legalName.value}`} record={record} ctx={ctx} />
               <div className="flow-calendar">
                 <div className="section-mini">
                   <p className="eyebrow mono">Compliance calendar · tax year {ctx.taxYear}</p>
@@ -306,6 +385,8 @@ export function Experience() {
                 <CalendarView record={record} ctx={ctx} />
               </div>
               <PacketPanel record={record} ctx={ctx} />
+              <AccountantPanel record={record} ctx={ctx} />
+              {mode === "demo" ? <SampleLinks /> : null}
             </div>
           ) : null}
         </section>

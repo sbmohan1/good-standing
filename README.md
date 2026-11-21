@@ -19,6 +19,11 @@ _Status: work in progress. See [BRIEF.md](./BRIEF.md) for the full spec._
 - **Delaware franchise tax estimate:** both methods with full workings, so a scary $85,165 notice becomes the $450 you actually owe.
 - **Filing packet:** pre-filled fields and a checklist you review and file.
 - **First 30 days check** for newly formed companies.
+- **Calendar export:** deadlines as an `.ics` file for Google Calendar, Apple Calendar or Outlook, with reminders 30 and 7 days before.
+- **Gross assets worksheet:** adds up year-end cash, receivables, equipment, prepaid and other assets when you don't have Schedule L handy.
+- **What if:** recalculates both methods as you change authorized shares, issued shares, par value or gross assets.
+- **Delaware notice explainer:** upload the notice and see why it says $85,165 and how to pay the lower amount.
+- **Summary for your accountant:** every fact with its source, the workings, obligations and open questions, as Markdown or a printable PDF.
 
 ## Guardrails
 
@@ -62,6 +67,9 @@ pnpm --filter @good-standing/web dev     # http://localhost:3000, reads ANTHROPI
 - `/?demo=1` opens the fictional Lumen Labs company with its document facts awaiting confirmation. `/?demo=confirmed` skips the review.
 - The demo company, review, estimate, calendar and packet all run in the browser with `@good-standing/core`. Nothing about them is sent anywhere.
 - `POST /api/extract` takes up to 4 PDFs (4 MB in total), reads them in memory, sends them to the Anthropic API and returns the record. Nothing is written to disk, and file contents are never logged.
+- Calendar `.ics`, the gross assets worksheet, the What if panel and the accountant summary are all built in the browser.
+- "I got a Delaware notice" uploads one PDF through the same endpoint. The amounts come back with their quotes, and the comparison is recomputed in the browser as the record changes.
+- `public/samples/` serves the fictional Lumen Labs PDFs (certificate, stock purchase agreement, notice) so visitors can try uploads without real documents.
 - Deploy: a Vercel project with root directory `apps/web` and `ANTHROPIC_API_KEY` set. Optional: `ANTHROPIC_MODEL`, and `NEXT_PUBLIC_REPO_URL` for the GitHub link.
 - The liquid-chrome background is an original WebGL shader (`apps/web/components/LiquidChrome.tsx`). It renders at reduced resolution, pauses in hidden tabs and holds a still frame for `prefers-reduced-motion`.
 
@@ -128,7 +136,7 @@ Add this to `claude_desktop_config.json` (Settings → Developer → Edit Config
 
 | Tool | What it does |
 | --- | --- |
-| `ingest_documents` | Extract facts from formation PDFs, each with a page, a verified quote and a needs-confirmation status. |
+| `ingest_documents` | Extract facts from formation PDFs, each with a page, a verified quote and a needs-confirmation status. A Delaware franchise tax notice is explained against the record. |
 | `get_company_record` | The record, with each field's status and source, plus open questions. |
 | `set_company_facts` | Record founder answers and corrections, or confirm extracted values as-is (the document citation is kept). |
 | `load_demo_company` | Load the fictional Lumen Labs record so you can try it without documents. |
@@ -137,6 +145,10 @@ Add this to `claude_desktop_config.json` (Settings → Developer → Edit Config
 | `prepare_filing_packet` | A Markdown packet for the Delaware annual report, saved to `.good-standing/packets/`. |
 | `first_30_days_check` | EIN, 83(b), bank account, how investor money should arrive, backup payment method, registered agent date. |
 | `explain` | Grounds an answer in the rules registry and the record, or says "I don't know, ask a tax professional." |
+| `export_calendar_ics` | Save the calendar as an `.ics` file with reminders 30 and 7 days before each deadline. |
+| `gross_assets_worksheet` | Add up year-end balance-sheet lines into gross assets, exactly, with the working. Saves only when told to. |
+| `franchise_tax_scenario` | "What if I reduce authorized shares?": both methods for hypothetical inputs. Never changes the record. |
+| `prepare_accountant_summary` | A Markdown summary for an accountant. Works with an incomplete record and lists what's open. |
 | `fetch_stripe_hints` | Optional. Reads your Stripe balance (and Treasury cash) with a read-only agent key, as a gross-assets hint to confirm against your balance sheet. Never writes to the record or to Stripe. |
 
 ### Optional: Stripe hints
@@ -169,4 +181,9 @@ Collected from `TODO(verify)` markers in `packages/core/src`. Each one is also s
 - **Web upload limit is 4 MB, not 10 MB.** Vercel Functions cap request bodies at 4.5 MB. The MCP server still accepts 10 MB files. Larger uploads would need direct-to-storage uploads, which would break the "never stored" promise.
 - **Web rate limit is best effort.** 6 extractions per IP per 10 minutes, counted in each function instance's memory. It isn't a global quota.
 - **Web demo record lives in the page.** Refreshing the page loses edits. Nothing is saved server-side by design.
+- **Notices take a second request.** The notice amounts are read by a separate, small structured-output call, because adding them to the main schema exceeded the API's grammar size limit. Only notices pay for it.
+- **The notice isn't saved.** In the MCP server, the comparison appears in the `ingest_documents` result. Ingest the notice again after confirming facts to see the full comparison.
+- **Calendar export is a file, not a subscription.** A live feed would need the record stored on a server, which Good Standing doesn't do.
+- **Gross assets worksheet is the founder's estimate.** It's saved as a founder answer with the breakdown attached, to be checked against Schedule L.
+- **What if uses one combined share class.** Scenarios with several classes at different par values aren't modelled.
 - **Out of scope:** prorated franchise tax after mid-year share amendments, Large Corporate Filer math, and state taxes outside Delaware. These are detected and flagged, not calculated.

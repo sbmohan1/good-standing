@@ -3,6 +3,8 @@ import {
   type CompanyRecordField,
   emptyRecord,
   type Fact,
+  type NoticeFacts,
+  type NoticeValue,
   type Safe,
 } from "@good-standing/core";
 import type { DocumentExtraction, ExtractedField } from "./extractDocument.ts";
@@ -23,6 +25,8 @@ export interface BuildResult {
   conflicts: string[];
   notes: string[];
   founderHints: FounderHint[];
+  /** Amounts transcribed from a Delaware franchise tax notice, if one was provided. Not part of the record. */
+  notice: NoticeFacts | null;
 }
 
 type Sourced = { doc: DocumentExtraction; field: ExtractedField };
@@ -41,6 +45,15 @@ function collect(docs: DocumentExtraction[], name: ExtractedField["name"]): Sour
   // Certificates first, so a certificate wins over a mention in another document.
   const ordered = [...docs].sort((a, b) => rank(a) - rank(b));
   return ordered.flatMap((doc) => doc.fields.filter((f) => f.name === name).map((field) => ({ doc, field })));
+}
+
+/** Same fact, allowing for case and spacing differences in text (notices often print names in capitals). */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (typeof a === "string" && typeof b === "string") {
+    const norm = (t: string) => t.toLowerCase().replace(/\s+/g, " ").trim();
+    return norm(a) === norm(b);
+  }
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 function rank(doc: DocumentExtraction): number {
@@ -73,7 +86,7 @@ export function buildRecord(docs: DocumentExtraction[], base: CompanyRecord = em
     const [first] = sources;
     if (!first) return;
     for (const other of sources.slice(1)) {
-      if (JSON.stringify(other.field.value) !== JSON.stringify(first.field.value)) {
+      if (!sameValue(other.field.value, first.field.value)) {
         conflicts.push(
           `${key}: ${first.doc.docName} p.${first.field.page} says ${JSON.stringify(first.field.value)}, but ${other.doc.docName} p.${other.field.page} says ${JSON.stringify(other.field.value)}. Using the first; please confirm.`,
         );
@@ -127,6 +140,18 @@ export function buildRecord(docs: DocumentExtraction[], base: CompanyRecord = em
   const stamped = elections.find((e) => (e.field.value as { irsStamped: boolean }).irsStamped);
   if (stamped) set("has83bConfirmation", toFact(true, stamped), [stamped]);
 
-  return { record, extractedFields, unverifiedFields, conflicts, notes, founderHints };
+  const noticeValue = (name: ExtractedField["name"]): NoticeValue | null => {
+    const [first] = collect(docs, name);
+    if (!first) return null;
+    return { value: first.field.value as number, docName: first.doc.docName, page: first.field.page, quote: first.field.quote, verified: first.field.verified };
+  };
+  const noticeFacts: NoticeFacts = {
+    taxYear: noticeValue("noticeTaxYear"),
+    franchiseTax: noticeValue("noticeFranchiseTax"),
+    totalDue: noticeValue("noticeTotalDue"),
+  };
+  const notice = noticeFacts.franchiseTax || noticeFacts.totalDue ? noticeFacts : null;
+
+  return { record, extractedFields, unverifiedFields, conflicts, notes, founderHints, notice };
 }
 

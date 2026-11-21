@@ -74,3 +74,27 @@ export function displayValue(field: CompanyRecordField, record: CompanyRecord): 
       return typeof value === "boolean" ? (value ? "yes" : "no") : String(value);
   }
 }
+
+/** Questions for every missing field, in the order a founder should answer them. */
+export function openQuestions(record: CompanyRecord): string[] {
+  const order: CompanyRecordField[] = [
+    "grossAssets",
+    "founders",
+    "issuedShares",
+    "shareClasses",
+    "entityType",
+    "incorporationDate",
+    "contractorPaymentsByPayee",
+    "statesWithOperations",
+    "atlasCompany",
+    "registeredAgent",
+    "has83bConfirmation",
+    "founderStockIssueDate",
+    "hasReportableRelatedPartyTransactions",
+    "amendedAuthorizedSharesThisYear",
+    "fiscalYearEnd",
+  ];
+  return order
+    .filter((f) => record[f].status === "missing" && FIELDS[f].question)
+    .map((f) => `${FIELDS[f].label}: ${FIELDS[f].question}`);
+}

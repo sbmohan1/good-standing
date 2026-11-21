@@ -113,6 +113,31 @@ export const SAMPLE_DOCS: SampleDoc[] = [
       ],
     ],
   },
+  {
+    fileName: "Lumen Labs - Delaware Franchise Tax Notice (SAMPLE).pdf",
+    title: "Delaware Franchise Tax Notice, Lumen Labs, Inc. (SAMPLE)",
+    pages: [
+      [
+        { kind: "title", text: "ANNUAL FRANCHISE TAX NOTICE (SAMPLE)" },
+        {
+          kind: "small",
+          text: "Fictional sample for the Good Standing demo, showing the kind of notice a Delaware corporation receives. Not issued by the State of Delaware.",
+        },
+        { kind: "para", text: "Corporation: LUMEN LABS, INC." },
+        { kind: "para", text: "Delaware File Number: SAMPLE-7654321" },
+        { kind: "para", text: "Tax Year: 2026" },
+        { kind: "heading", text: "Amount Due" },
+        { kind: "para", text: "Franchise Tax: $85,165.00" },
+        { kind: "para", text: "Annual Report Filing Fee: $50.00" },
+        { kind: "para", text: "Total Due: $85,215.00" },
+        { kind: "para", text: "Payment and annual report due by March 1, 2027." },
+        {
+          kind: "para",
+          text: "This amount was calculated using the Authorized Shares method. Corporations may use the Assumed Par Value Capital method by reporting gross assets and issued shares in the annual report.",
+        },
+      ],
+    ],
+  },
 ];
 
 function wrap(text: string, font: PDFFont, size: number, maxWidth: number): string[] {

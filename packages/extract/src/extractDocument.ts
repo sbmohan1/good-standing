@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import type { ExtractionModel } from "./model.ts";
 import { assertValidPdf, readPdfPages } from "./pdfText.ts";
-import { EXTRACTED_FIELDS, type ExtractedFieldName, strictExtractionSchema } from "./schema.ts";
+import { EXTRACTED_FIELDS, type ExtractedFieldName, NOTICE_FIELDS, strictExtractionSchema, strictNoticeSchema } from "./schema.ts";
 import { checkQuote, type QuoteCheck, quoteContainsDate, quoteContainsNumber } from "./verify.ts";
 
 export interface ExtractedField {
@@ -28,8 +28,6 @@ export class ExtractionFailedError extends Error {
   override name = "ExtractionFailedError";
 }
 
-type StrictExtraction = z.infer<ReturnType<typeof strictExtractionSchema>>;
-
 function formatIssues(error: z.ZodError): string {
   return error.issues.map((i) => `- ${i.path.join(".") || "(root)"}: ${i.message}`).join("\n");
 }
@@ -51,12 +49,18 @@ function valueCheck(name: ExtractedFieldName, value: unknown, quote: string): Ex
       return quoteContainsNumber(quote, (value as { shares: number }).shares) ? "ok" : "mismatch";
     case "safe":
       return quoteContainsNumber(quote, (value as { amount: number }).amount) ? "ok" : "mismatch";
+    case "noticeTaxYear":
+    case "noticeFranchiseTax":
+    case "noticeTotalDue":
+      return quoteContainsNumber(quote, value as number) ? "ok" : "mismatch";
     default:
       return "not_checked";
   }
 }
 
-function verifyField(name: ExtractedFieldName, raw: NonNullable<StrictExtraction[ExtractedFieldName]>, pages: string[]): ExtractedField {
+type CitedRaw = { value: unknown; page: number; quote: string; confidence: "high" | "medium" | "low" };
+
+function verifyField(name: ExtractedFieldName, raw: CitedRaw, pages: string[]): ExtractedField {
   const quoteCheck = checkQuote(raw.quote, pages, raw.page);
   const vCheck = valueCheck(name, raw.value, raw.quote);
   const issues: string[] = [];
@@ -88,26 +92,33 @@ export async function extractDocument(
 ): Promise<DocumentExtraction> {
   assertValidPdf(input.bytes, input.docName);
   const pages = await readPdfPages(input.bytes);
-  const schema = strictExtractionSchema(pages.length);
   const pdfBase64 = Buffer.from(input.bytes).toString("base64");
 
-  let parsed: StrictExtraction | null = null;
-  let feedback: string | undefined;
-  for (let attempt = 1; attempt <= 2 && parsed === null; attempt++) {
-    const raw = await options.model({ docName: input.docName, pdfBase64, retryFeedback: feedback });
-    const result = raw === null ? null : schema.safeParse(raw);
-    if (result?.success) parsed = result.data;
-    else feedback = result ? formatIssues(result.error) : "- No valid JSON was returned.";
-  }
-  if (parsed === null) {
+  const ask = async <S extends z.ZodType>(kind: "document" | "notice", schema: S): Promise<z.infer<S>> => {
+    let feedback: string | undefined;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const raw = await options.model({ docName: input.docName, pdfBase64, kind, retryFeedback: feedback });
+      const result = raw === null ? null : schema.safeParse(raw);
+      if (result?.success) return result.data;
+      feedback = result ? formatIssues(result.error) : "- No valid JSON was returned.";
+    }
     throw new ExtractionFailedError(`Couldn't extract ${input.docName} after a retry:\n${feedback}`);
-  }
+  };
 
-  const result = parsed;
+  const result = await ask("document", strictExtractionSchema(pages.length));
   const fields = EXTRACTED_FIELDS.flatMap((name) => {
     const raw = result[name];
     return raw ? [verifyField(name, raw, pages)] : [];
   });
+
+  // Notices get a second, small request for the amounts (see NoticeExtractionSchema).
+  if (result.documentType === "delaware_franchise_tax_notice") {
+    const amounts = await ask("notice", strictNoticeSchema(pages.length));
+    for (const name of NOTICE_FIELDS) {
+      const raw = amounts[name];
+      if (raw) fields.push(verifyField(name, raw, pages));
+    }
+  }
 
   return { docName: input.docName, documentType: result.documentType, totalPages: pages.length, fields };
 }

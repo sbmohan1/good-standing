@@ -3,6 +3,10 @@ import type { z } from "zod";
 import { withFooter } from "./render.ts";
 import {
   complianceCalendar,
+  exportCalendarIcs,
+  franchiseTaxScenario,
+  grossAssetsWorksheet,
+  prepareAccountantSummary,
   explain,
   fetchStripeHintsTool,
   firstThirtyDays,
@@ -22,11 +26,12 @@ export const SERVER_INSTRUCTIONS = `Good Standing keeps a Stripe Atlas–formed 
 How to use it:
 1. Start with get_company_record. If there's no record, ask for the founder's Certificate of Incorporation and stock purchase agreement PDFs and call ingest_documents, or call load_demo_company to try the fictional demo.
 2. Show the founder each extracted value with its page and quote. Record what they accept or correct with set_company_facts, and ask the listed questions (gross assets, founder residency, contractors, other states).
-3. If the founder doesn't know gross assets, fetch_stripe_hints can show their Stripe balance as a starting hint; they must still give the Schedule L total assets.
-4. For "what does my company owe?", call compliance_calendar and lead with its headline. Use franchise_tax_estimate for the full math and prepare_filing_packet for the filing packet.
-5. Never compute amounts or dates yourself; use the numbers and dates the tools return, with their sources. For questions, call explain and answer only from what it returns.
-6. Read-only: nothing here files, pays, or writes to Stripe. The founder files.
-7. Keep the "Information, not tax or legal advice" footer in your answer.`;
+3. If the founder doesn't know gross assets, use gross_assets_worksheet to add up their year-end balance-sheet lines (fetch_stripe_hints can show their Stripe balance as a hint for the cash line). Save the total only once they agree.
+4. For "what does my company owe?", call compliance_calendar and lead with its headline. Use franchise_tax_estimate for the full math and prepare_filing_packet for the filing packet. If the founder received a Delaware notice, ingest it: the result explains the amount.
+5. Other tools: export_calendar_ics (deadlines into their calendar app), franchise_tax_scenario ("what if I change authorized shares?"), prepare_accountant_summary (a summary for their accountant).
+6. Never compute amounts or dates yourself; use the numbers and dates the tools return, with their sources. For questions, call explain and answer only from what it returns.
+7. Read-only: nothing here files, pays, or writes to Stripe. The founder files.
+8. Keep the "Information, not tax or legal advice" footer in your answer.`;
 
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 const LOCAL_WRITE = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
@@ -52,7 +57,7 @@ export function createServer(deps: ToolDeps): McpServer {
     {
       title: "Ingest formation documents",
       description:
-        "Read the founder's formation PDFs (Certificate of Incorporation, stock purchase agreements, 83(b) confirmation, SAFEs; ≤10 MB each) and add the facts to the company record. Every value comes back with its page, a verbatim quote, and whether the quote was verified against the PDF. Extracted values start as needs-confirmation. Sends the PDFs to the Anthropic API; they're processed in memory and not stored.",
+        "Read the founder's formation PDFs (Certificate of Incorporation, stock purchase agreements, 83(b) confirmation, SAFEs) or a Delaware franchise tax notice (≤10 MB each) and add the facts to the company record. Every value comes back with its page, a verbatim quote, and whether the quote was verified against the PDF. Extracted values start as needs-confirmation. Sends the PDFs to the Anthropic API; they're processed in memory and not stored.",
       inputSchema: inputSchemas.ingestDocuments,
       annotations: { ...LOCAL_WRITE, openWorldHint: true },
     },
@@ -160,6 +165,54 @@ export function createServer(deps: ToolDeps): McpServer {
       annotations: { ...READ_ONLY, idempotentHint: false, openWorldHint: true },
     },
     async () => respond(() => fetchStripeHintsTool(deps))(),
+  );
+
+  server.registerTool(
+    "export_calendar_ics",
+    {
+      title: "Export calendar (.ics)",
+      description:
+        "Save the compliance calendar as an .ics file the founder can open in Google Calendar, Apple Calendar or Outlook. One all-day event per dated obligation that applies or may apply, with reminders 30 and 7 days before.",
+      inputSchema: inputSchemas.taxYearOnly,
+      annotations: LOCAL_WRITE,
+    },
+    async (input: z.infer<typeof inputSchemas.taxYearOnly>) => respond(() => exportCalendarIcs(deps, input))(),
+  );
+
+  server.registerTool(
+    "gross_assets_worksheet",
+    {
+      title: "Gross assets worksheet",
+      description:
+        "Add up the founder's year-end balance-sheet lines (cash, receivables, equipment, prepaid, other) into total gross assets, exactly, with the working shown. Call with no amounts to get the questions to ask. Pass save: true only after the founder agrees with the total.",
+      inputSchema: inputSchemas.grossAssetsWorksheet,
+      annotations: LOCAL_WRITE,
+    },
+    async (input: z.infer<typeof inputSchemas.grossAssetsWorksheet>) => respond(() => grossAssetsWorksheet(deps, input))(),
+  );
+
+  server.registerTool(
+    "franchise_tax_scenario",
+    {
+      title: "Franchise tax what-if",
+      description:
+        "Recalculate Delaware franchise tax under both methods for hypothetical authorized shares, par value, issued shares or gross assets (anything not given defaults to the record). For questions like \"what if I reduce authorized shares?\". Doesn't change the record.",
+      inputSchema: inputSchemas.scenario,
+      annotations: READ_ONLY,
+    },
+    async (input: z.infer<typeof inputSchemas.scenario>) => respond(() => franchiseTaxScenario(deps, input))(),
+  );
+
+  server.registerTool(
+    "prepare_accountant_summary",
+    {
+      title: "Summary for your accountant",
+      description:
+        "A read-only Markdown summary for the founder's accountant: every fact with status and source, the franchise tax workings (or what's missing), obligations and open questions. Works with an incomplete record.",
+      inputSchema: inputSchemas.taxYearOnly,
+      annotations: LOCAL_WRITE,
+    },
+    async (input: z.infer<typeof inputSchemas.taxYearOnly>) => respond(() => prepareAccountantSummary(deps, input))(),
   );
 
   return server;

@@ -45,6 +45,7 @@ export const DOCUMENT_TYPES = [
   "stock_purchase_agreement",
   "83b_confirmation",
   "safe",
+  "delaware_franchise_tax_notice",
   "other",
 ] as const;
 
@@ -61,10 +62,25 @@ export const ModelExtractionSchema = z.object({
   election83b: cited(election83b),
 });
 export type ModelExtraction = z.infer<typeof ModelExtractionSchema>;
-export type ExtractedFieldName = Exclude<keyof ModelExtraction, "documentType">;
+export type DocumentFieldName = Exclude<keyof ModelExtraction, "documentType">;
 export const EXTRACTED_FIELDS = Object.keys(ModelExtractionSchema.shape).filter(
-  (k): k is ExtractedFieldName => k !== "documentType",
+  (k): k is DocumentFieldName => k !== "documentType",
 );
+
+/**
+ * Delaware franchise tax notices get a second, small request with their own schema. Keeping these
+ * fields out of the main schema keeps its structured-output grammar within the API's size limit.
+ */
+export const NoticeExtractionSchema = z.object({
+  noticeTaxYear: cited(z.number().int()),
+  noticeFranchiseTax: cited(z.number()),
+  noticeTotalDue: cited(z.number()),
+});
+export type NoticeExtraction = z.infer<typeof NoticeExtractionSchema>;
+export type NoticeFieldName = keyof NoticeExtraction;
+export const NOTICE_FIELDS = Object.keys(NoticeExtractionSchema.shape) as NoticeFieldName[];
+
+export type ExtractedFieldName = DocumentFieldName | NoticeFieldName;
 
 const isoDate = z
   .string()
@@ -116,5 +132,26 @@ export function strictExtractionSchema(totalPages: number) {
       }),
     ),
     election83b: strictCited(z.object({ taxpayer: z.string().min(1), irsStamped: z.boolean() })),
+  });
+}
+
+/** Strict validation of the notice answer. */
+export function strictNoticeSchema(totalPages: number) {
+  const strictCited = <T extends z.ZodType>(value: T) =>
+    z
+      .object({
+        value,
+        page: z.number().int().min(1).max(totalPages, `page must be between 1 and ${totalPages}`),
+        quote: z
+          .string()
+          .min(1)
+          .refine((q) => q.trim().split(/\s+/).length <= MAX_QUOTE_WORDS, `quotes must be ${MAX_QUOTE_WORDS} words or fewer`),
+        confidence,
+      })
+      .nullable();
+  return z.object({
+    noticeTaxYear: strictCited(z.number().int().min(2000).max(2100)),
+    noticeFranchiseTax: strictCited(z.number().nonnegative()),
+    noticeTotalDue: strictCited(z.number().nonnegative()),
   });
 }
